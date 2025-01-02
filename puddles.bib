@@ -1,0 +1,531 @@
+@inproceedings{luo2021characterizing,
+	title        = {Characterizing microservice dependency and performance: Alibaba trace analysis},
+	author       = {Luo, Shutian and Xu, Huanle and Lu, Chengzhi and Ye, Kejiang and Xu, Guoyao and Zhang, Liping and Ding, Yu and He, Jian and Xu, Chengzhong},
+	year         = 2021,
+	booktitle    = {Proceedings of the ACM Symposium on Cloud Computing},
+	pages        = {412--426}
+}
+
+@article{barroso2003web,
+	title        = {Web search for a planet: The Google cluster architecture},
+	author       = {Barroso, Luiz Andr{\'e} and Dean, Jeffrey and Holzle, Urs},
+	year         = 2003,
+	journal      = {IEEE micro},
+	publisher    = {IEEE},
+	volume       = 23,
+	number       = 2,
+	pages        = {22--28}
+}
+
+@inproceedings{Khasgiwale2023shimmy,
+	title        = {Shimmy: Accelerating Inter-Container Communication for the IoT Edge},
+	author       = {Khasgiwale, Manan and Sharma, Vasu and Mishra, Shivakant and Thadichi, Biljith and John, Jaiber and Khanna, Rahul},
+	year         = 2023,
+	booktitle    = {GLOBECOM 2023 - 2023 IEEE Global Communications Conference},
+	volume       = {},
+	number       = {},
+	pages        = {4461--4466},
+	doi          = {10.1109/GLOBECOM54140.2023.10437823},
+	keywords     = {TCP;Cloud computing;Protocols;Microservice architectures;Computer architecture;Containers;Central Processing Unit;microservice;IoT;Cloud-native;intercontainer latencymicroservice;intercontainer latency}
+}
+
+@inproceedings{hobson2021shared,
+	title        = {Shared-Memory Communication for Containerized Workflows},
+	author       = {Hobson, Tanner and Yildiz, Orcun and Nicolae, Bogdan and Huang, Jian and Peterka, Tom},
+	year         = 2021,
+	booktitle    = {2021 IEEE/ACM 21st International Symposium on Cluster, Cloud and Internet Computing (CCGrid)},
+	volume       = {},
+	number       = {},
+	pages        = {123--132},
+	doi          = {10.1109/CCGrid51090.2021.00022},
+	keywords     = {Software libraries;Runtime;Message passing;Containers;Data structures;Data models;Synchronization;shared memory;workflow systems;containers}
+}
+
+@inproceedings{su2022pipedevice,
+	title        = {PipeDevice: a hardware-software co-design approach to intra-host container communication},
+	author       = {Su, Qiang and Wang, Chuanwen and Niu, Zhixiong and Shu, Ran and Cheng, Peng and Xiong, Yongqiang and Han, Dongsu and Xue, Chun Jason and Xu, Hong},
+	year         = 2022,
+	booktitle    = {Proceedings of the 18th International Conference on Emerging Networking EXperiments and Technologies},
+	location     = {Roma, Italy},
+	publisher    = {Association for Computing Machinery},
+	address      = {New York, NY, USA},
+	series       = {CoNEXT '22},
+	pages        = {126–139},
+	doi          = {10.1145/3555050.3569118},
+	isbn         = 9781450395083,
+	url          = {https://doi.org/10.1145/3555050.3569118},
+	abstract     = {Containers are prevalently adopted due to the deployment and performance advantages over virtual machines. For many containerized data-intensive applications, however, bulky data transfers may pose performance issues. In particular, communication across co-located containers on the same host incurs large overheads in memory copy and the kernel's TCP stack. Existing solutions such as shared-memory networking and RDMA have their own limitations, including insufficient memory isolation and limited scalability.This paper presents PipeDevice, a new system for low overhead intra-host container communication. PipeDevice follows a hardware-software co-design approach --- it offloads data forwarding entirely onto hardware, which accesses application data in hugepages on the host, thereby eliminating CPU overhead from memory copy and TCP processing. PipeDevice preserves memory isolation and scales well to connections, making it deployable in public clouds. Isolation is achieved by allocating dedicated memory to each connection from hugepages. To achieve high scalability, PipeDevice stores the connection states entirely in host DRAM and manages them in software. Evaluation with a prototype implementation on commodity FPGA shows that for delivering 80 Gbps across containers PipeDevice saves 63.2\% CPU compared to kernel TCP stack, and 40.5\% over FreeFlow. PipeDevice provides salient benefits to applications. For example, we port baidu-allreduce to PipeDevice and obtain ~2.2\texttimes{} gains in allreduce throughput.},
+	numpages     = 14,
+	keywords     = {hardware-software co-design, container communication}
+}
+
+@inproceedings{wilson1992pointer,
+	title        = {Pointer swizzling at page fault time: Efficiently and compatibly supporting huge address spaces on standard hardware},
+	author       = {Wilson, Paul R and Kakkad, Sheetal V},
+	year         = 1992,
+	booktitle    = {Proceedings of the 1992 International Workshop on Object Orientation in Operating Systems},
+	pages        = {364--377}
+}
+
+@inproceedings{kanev2015profiling,
+	title        = {Profiling a warehouse-scale computer},
+	author       = {Kanev, Svilen and Darago, Juan Pablo and Hazelwood, Kim and Ranganathan, Parthasarathy and Moseley, Tipp and Wei, Gu-Yeon and Brooks, David},
+	year         = 2015,
+	booktitle    = {Proceedings of the 42nd Annual International Symposium on Computer Architecture},
+	location     = {Portland, Oregon},
+	publisher    = {Association for Computing Machinery},
+	address      = {New York, NY, USA},
+	series       = {ISCA '15},
+	pages        = {158–169},
+	doi          = {10.1145/2749469.2750392},
+	isbn         = 9781450334020,
+	url          = {https://doi.org/10.1145/2749469.2750392},
+	abstract     = {With the increasing prevalence of warehouse-scale (WSC) and cloud computing, understanding the interactions of server applications with the underlying microarchitecture becomes ever more important in order to extract maximum performance out of server hardware. To aid such understanding, this paper presents a detailed microarchitectural analysis of live datacenter jobs, measured on more than 20,000 Google machines over a three year period, and comprising thousands of different applications.We first find that WSC workloads are extremely diverse, breeding the need for architectures that can tolerate application variability without performance loss. However, some patterns emerge, offering opportunities for co-optimization of hardware and software. For example, we identify common building blocks in the lower levels of the software stack. This "datacenter tax" can comprise nearly 30\% of cycles across jobs running in the fleet, which makes its constituents prime candidates for hardware specialization in future server systems-on-chips. We also uncover opportunities for classic microarchitectural optimizations for server processors, especially in the cache hierarchy. Typical workloads place significant stress on instruction caches and prefer memory latency over bandwidth. They also stall cores often, but compute heavily in bursts. These observations motivate several interesting directions for future warehouse-scale computers.},
+	numpages     = 12
+}
+
+@inproceedings{argodsm,
+	title        = {Turning centralized coherence and distributed critical-section execution on their head: A new approach for scalable distributed shared memory},
+	author       = {Kaxiras, Stefanos and Klaftenegger, David and Norgren, Magnus and Ros, Alberto and Sagonas, Konstantinos},
+	year         = 2015,
+	booktitle    = {Proceedings of the 24th International Symposium on High-Performance Parallel and Distributed Computing},
+	pages        = {3--14}
+}
+
+@misc{cxl-switch,
+	title        = {{CXL} Switch {SoC} Unlocks More Memory for {AI}},
+	author       = {James Morra},
+	year         = 2023,
+	url         = {https://www.electronicdesign.com/technologies/embedded/article/21272132/electronic-design-cxl-switch-soc-unlocks-more-memory-for-ai}
+}
+
+@inproceedings{deathstarbench,
+	title        = {An open-source benchmark suite for microservices and their hardware-software implications for cloud \& edge systems},
+	author       = {Gan, Yu and Zhang, Yanqi and Cheng, Dailun and Shetty, Ankitha and Rathi, Priyal and Katarki, Nayan and Bruno, Ariana and Hu, Justin and Ritchken, Brian and Jackson, Brendon and others},
+	year         = 2019,
+	booktitle    = {Proceedings of the Twenty-Fourth International Conference on Architectural Support for Programming Languages and Operating Systems},
+	pages        = {3--18}
+}
+
+@inproceedings{libmpk,
+	title        = {libmpk: Software abstraction for {Intel} memory protection keys ({Intel} {MPK})},
+	author       = {Park, Soyeon and Lee, Sangho and Xu, Wen and Moon, Hyungon and Kim, Taesoo},
+	year         = 2019,
+	booktitle    = {2019 {USENIX} Annual Technical Conference (USENIX ATC '19)},
+	pages        = {241--254}
+}
+
+@inproceedings{google-rpc-study,
+	title        = {A Cloud-Scale Characterization of Remote Procedure Calls},
+	author       = {Seemakhupt, Korakit and Stephens, Brent E and Khan, Samira and Liu, Sihang and Wassel, Hassan and Yeganeh, Soheil Hassas and Snoeren, Alex C and Krishnamurthy, Arvind and Culler, David E and Levy, Henry M},
+	year         = 2023,
+	booktitle    = {Proceedings of the 29th Symposium on Operating Systems Principles},
+	pages        = {498--514}
+}
+
+@inproceedings{mahar2024puddles,
+	title        = {Puddles: Application-Independent Recovery and Location-Independent Data for Persistent Memory},
+	author       = {Mahar, Suyash and Shen, Mingyao and Smith, TJ and Izraelevitz, Joseph and Swanson, Steven},
+	year         = 2024,
+	booktitle    = {Proceedings of the Nineteenth European Conference on Computer Systems},
+	location     = {Athens, Greece},
+	publisher    = {Association for Computing Machinery},
+	series       = {EuroSys '24},
+	pages        = {575–589},
+	doi          = {10.1145/3627703.3629555},
+	isbn         = 9798400704376,
+	url          = {https://doi.org/10.1145/3627703.3629555},
+	abstract     = {In this paper, we argue that current work has failed to provide a comprehensive and maintainable in-memory representation for persistent memory. PM data should be easily mappable into a process address space, shareable across processes, shippable between machines, consistent after a crash, and accessible to legacy code with fast, efficient pointers as first-class abstractions.While existing systems have provided niceties like mmap()-based load/store access, they have not been able to support all these necessary properties due to conflicting requirements.We propose Puddles, a new persistent memory abstraction, to solve these problems. Puddles provide application-independent recovery after a power outage; they make recovery from a system failure a system-level property of the stored data rather than the responsibility of the programs that access it. Puddles use native pointers, so they are compatible with existing code. Finally, Puddles implement support for sharing and shipping of PM data between processes and systems without expensive serialization and deserialization.Compared to existing systems, Puddles are at least as fast as and up to 1.34\texttimes{} faster than PMDK while being competitive with other PM libraries across YCSB workloads. Moreover, to demonstrate Puddles' ability to relocate data, we showcase a sensor network data-aggregation workload that results in a 4.7\texttimes{} speedup over PMDK.},
+	numpages     = 15,
+	keywords     = {Crash consistency, Non-volatile memory, PMEM programming library}
+}
+
+@inproceedings{sung2020intra,
+	title        = {Intra-unikernel isolation with {Intel} memory protection keys},
+	author       = {Sung, Mincheol and Olivier, Pierre and Lankes, Stefan and Ravindran, Binoy},
+	year         = 2020,
+	booktitle    = {Proceedings of the 16th ACM SIGPLAN/SIGOPS International Conference on Virtual Execution Environments},
+	pages        = {143--156}
+}
+
+@inproceedings{zhang2023partial,
+	title        = {Partial Failure Resilient Memory Management System for ({CXL}-based) Distributed Shared Memory},
+	author       = {Zhang, Mingxing and Ma, Teng and Hua, Jinqi and Liu, Zheng and Chen, Kang and Ding, Ning and Du, Fan and Jiang, Jinlei and Ma, Tao and Wu, Yongwei},
+	year         = 2023,
+	booktitle    = {Proceedings of the 29th Symposium on Operating Systems Principles},
+	location     = {Koblenz, Germany},
+	publisher    = {Association for Computing Machinery},
+	series       = {SOSP'23},
+	pages        = {658–674},
+	doi          = {10.1145/3600006.3613135},
+	isbn         = 9798400702297,
+	url          = {https://doi.org/10.1145/3600006.3613135},
+	numpages     = 17,
+	keywords     = {non-blocking, distributed shared memory, CXL}
+}
+
+@online{grpc,
+	title        = {{gRPC}},
+	author       = {{Google Inc.}},
+	year         = 2021,
+	url          = {https://grpc.io/},
+	urldate      = {2023-02-21},
+	note         = {\url{https://grpc.io/}. Accessed: 2023-02-21}
+}
+
+@article{thriftrpc,
+	title        = {Thrift: Scalable cross-language services implementation},
+	author       = {Slee, Mark and Agarwal, Aditya and Kwiatkowski, Marc},
+	year         = 2007,
+	journal      = {Facebook white paper},
+	volume       = 5,
+	number       = 8,
+	pages        = 127
+}
+
+@article{birrell1984implementing,
+	title        = {Implementing remote procedure calls},
+	author       = {Birrell, Andrew D and Nelson, Bruce Jay},
+	year         = 1984,
+	journal      = {ACM Transactions on Computer Systems (TOCS)},
+	publisher    = {ACM New York, NY, USA},
+	volume       = 2,
+	number       = 1,
+	pages        = {39--59}
+}
+
+@misc{protobuf,
+	title        = {Protocol Buffers},
+	author       = {Google Inc.},
+	howpublished = {\url{https://protobuf.dev/}. Accessed: March 08, 2024}
+}
+
+@online{capnproto,
+	title        = {Cap’n Proto},
+	author       = {Kenton Varda},
+	year         = 2024,
+	url          = {https://capnproto.org/},
+	urldate      = {2024-03-08},
+	note         = {Accessed: March 08, 2024}
+}
+
+@inproceedings{quic,
+	title        = {The quic transport protocol: Design and internet-scale deployment},
+	author       = {Langley, Adam and Riddoch, Alistair and Wilk, Alyssa and Vicente, Antonio and Krasic, Charles and Zhang, Dan and Yang, Fan and Kouranov, Fedor and Swett, Ian and Iyengar, Janardhan and others},
+	year         = 2017,
+	booktitle    = {Proceedings of the conference of the ACM special interest group on data communication},
+	pages        = {183--196}
+}
+
+@inproceedings{erpc,
+	title        = {Datacenter {RPCs} can be general and fast},
+	author       = {Kalia, Anuj and Kaminsky, Michael and Andersen, David},
+	year         = 2019,
+	booktitle    = {16th {USENIX} Symposium on Networked Systems Design and Implementation (NSDI '19)},
+	pages        = {1--16}
+}
+
+@inproceedings{lazarev2021dagger,
+	title        = {Dagger: efficient and fast RPCs in cloud microservices with near-memory reconfigurable NICs},
+	author       = {Lazarev, Nikita and Xiang, Shaojie and Adit, Neil and Zhang, Zhiru and Delimitrou, Christina},
+	year         = 2021,
+	booktitle    = {Proceedings of the 26th ACM International Conference on Architectural Support for Programming Languages and Operating Systems},
+	pages        = {36--51}
+}
+
+
+@book{boost.pfr,
+	title        = {Boost 1.84.0 Documentation},
+	author       = {Polukhin, Antony},
+	year         = 2023,
+	chapter      = {26. {Boost.PFR 2.2}},
+	url        = {https://www.boost.org/doc/libs/1_84_0/doc/html/boost_pfr.html}
+}
+
+@inproceedings{sun2023demystifying,
+	title        = {Demystifying {CXL} memory with genuine {CXL}-ready systems and devices},
+	author       = {Sun, Yan and Yuan, Yifan and Yu, Zeduo and Kuper, Reese and Song, Chihun and Huang, Jinghan and Ji, Houxiang and Agarwal, Siddharth and Lou, Jiaqi and Jeong, Ipoom and others},
+	year         = 2023,
+	booktitle    = {Proceedings of the 56th Annual IEEE/ACM International Symposium on Microarchitecture},
+	pages        = {105--121}
+}
+
+@misc{ycsb-scan,
+	title        = {{memcached SCAN always fail \#668}},
+	author       = {cimballihw},
+	year         = 2016,
+	month        = mar,
+	url         = {https://github.com/brianfrankcooper/YCSB/issues/668},
+	howpublished = {GitHub issue}
+}
+
+@misc{dax-cxl-lpc,
+	title        = {Shared {CXL} 3 memory: what will be required?},
+	author       = {Groves, John},
+	year         = 2023,
+	month        = nov,
+	url         = {https://lpc.events/event/17/contributions/1455/},
+	howpublished = {Linux Plumbers Conference}
+}
+
+@misc{cpp-obj-lifetime,
+	title        = {C++ Standard Limitations and Persistent Memory},
+	author       = {Romik, Szymon},
+	year         = 2019,
+	month        = {Oct},
+	journal      = {pmem.io},
+	url          = {https://pmem.io/blog/2019/10/c-standard-limitations-and-persistent-memory/},
+	note         = {\url{https://pmem.io/blog/2019/10/c-standard-limitations-and-persistent-memory/}}
+}
+
+@inproceedings{hatrpc,
+	title        = {{HatRPC}: hint-accelerated {Thrift} {RPC} over {RDMA}},
+	author       = {Li, Tianxi and Shi, Haiyang and Lu, Xiaoyi},
+	year         = 2021,
+	booktitle    = {Proceedings of the International Conference for High Performance Computing, Networking, Storage and Analysis},
+	location     = {St. Louis, Missouri},
+	publisher    = {Association for Computing Machinery},
+	series       = {SC '21},
+	doi          = {10.1145/3458817.3476191},
+	isbn         = 9781450384421,
+	url          = {https://doi.org/10.1145/3458817.3476191},
+	abstract     = {In this paper, we propose a novel hint-accelerated Remote Procedure Call (RPC) framework based on Apache Thrift over Remote Direct Memory Access (RDMA) protocols, called HatRPC. HatRPC proposes a hierarchical hint scheme towards optimizing heterogeneous RPC services and functions. The proposed hint design is composed of service-granularity and function-granularity hints for achieving varied optimization goals and reducing design space for further optimizing the underneath RDMA communication engine. We co-design a key-value store called HatKV with HatRPC and LMDB. The effectiveness and efficiency of HatRPC are validated and evaluated with our proposed Apache Thrift Benchmarks (ATB), YCSB, and TPC-H workloads. Performance evaluations show that the proposed HatRPC approach can deliver up to 55\% performance improvement for ATB benchmarks and up to 1.51X speedup for TPC-H queries compared with vanilla Thrift over IPoIB. In addition, the co-designed HatKV can achieve up to 85.5\% improvement for YCSB workloads.},
+	articleno    = 36,
+	numpages     = 14,
+	keywords     = {RDMA, RPC, code generation, hint, thrift}
+}
+
+@inproceedings{chen2023remote,
+	title        = {Remote procedure call as a managed system service},
+	author       = {Chen, Jingrong and Wu, Yongji and Lin, Shihan and Xu, Yechen and Kong, Xinhao and Anderson, Thomas and Lentz, Matthew and Yang, Xiaowei and Zhuo, Danyang},
+	year         = 2023,
+	booktitle    = {20th {USENIX} Symposium on Networked Systems Design and Implementation (NSDI '23)},
+	pages        = {141--159}
+}
+
+@inproceedings{darpc,
+	title        = {{DaRPC}: Data center {RPC}},
+	author       = {Stuedi, Patrick and Trivedi, Animesh and Metzler, Bernard and Pfefferle, Jonas},
+	year         = 2014,
+	booktitle    = {Proceedings of the ACM Symposium on Cloud Computing},
+	pages        = {1--13}
+}
+
+@inproceedings{cxl-over-ethernet,
+	title        = {{CXL} over {Ethernet}: A novel {FPGA}-based memory disaggregation design in data centers},
+	author       = {Wang, Chenjiu and He, Ke and Fan, Ruiqi and Wang, Xiaonan and Wang, Wei and Hao, Qinfen},
+	year         = 2023,
+	booktitle    = {2023 IEEE 31st Annual International Symposium on Field-Programmable Custom Computing Machines (FCCM)},
+	pages        = {75--82},
+	organization = {IEEE}
+}
+
+@article{rcmp,
+	title        = {Rcmp: Reconstructing {RDMA}-Based Memory Disaggregation via {CXL}},
+	author       = {Wang, Zhonghua and Guo, Yixing and Lu, Kai and Wan, Jiguang and Wang, Daohui and Yao, Ting and Wu, Huatao},
+	year         = 2024,
+	journal      = {ACM Transactions on Architecture and Code Optimization},
+	volume       = 21,
+	number       = 1,
+	pages        = {1--26}
+}
+
+@inproceedings{ruan2023nu,
+	title        = {Nu: Achieving {Microsecond-Scale} Resource Fungibility with Logical Processes},
+	author       = {Ruan, Zhenyuan and Park, Seo Jin and Aguilera, Marcos K and Belay, Adam and Schwarzkopf, Malte},
+	year         = 2023,
+	booktitle    = {20th {USENIX} Symposium on Networked Systems Design and Implementation (NSDI '23)},
+	pages        = {1409--1427}
+}
+
+@inproceedings{lu2024serialization,
+	title        = {Serialization/Deserialization-free State Transfer in Serverless Workflows},
+	author       = {Lu, Fangming and Wei, Xingda and Huang, Zhuobin and Chen, Rong and Wu, Minyu and Chen, Haibo},
+	year         = 2024,
+	booktitle    = {Proceedings of the Nineteenth European Conference on Computer Systems},
+	pages        = {132--147}
+}
+
+@inproceedings{monga2021birds,
+	title        = {Birds of a feather flock together: Scaling rdma rpcs with flock},
+	author       = {Monga, Sumit Kumar and Kashyap, Sanidhya and Min, Changwoo},
+	year         = 2021,
+	booktitle    = {Proceedings of the ACM SIGOPS 28th Symposium on Operating Systems Principles},
+	pages        = {212--227}
+}
+
+@inproceedings{simpson2020securing,
+	title        = {Securing {RDMA} for {High-Performance} Datacenter Storage Systems},
+	author       = {Anna Kornfeld Simpson and Adriana Szekeres and Jacob Nelson and Irene Zhang},
+	year         = 2020,
+	month        = jul,
+	booktitle    = {12th {USENIX} Workshop on Hot Topics in Cloud Computing (HotCloud '20)},
+	publisher    = {{USENIX} Association},
+	url          = {https://www.usenix.org/conference/hotcloud20/presentation/kornfeld-simpson}
+}
+
+@inproceedings{chang1998security,
+	title        = {Security versus performance tradeoffs in RPC implementations for safe language systems},
+	author       = {Chang, Chi-Chao and Czajkowski, Grzegorz and Hawblitzel, Chris and Hu, Deyu and von Eicken, Thorsten},
+	year         = 1998,
+	booktitle    = {Proceedings of the 8th ACM SIGOPS European Workshop on Support for Composing Distributed Applications},
+	location     = {Sintra, Portugal},
+	publisher    = {Association for Computing Machinery},
+	series       = {EW 8},
+	pages        = {158–161},
+	doi          = {10.1145/319195.319219},
+	isbn         = 9781450373173,
+	url          = {https://doi.org/10.1145/319195.319219},
+	numpages     = 4
+}
+
+@inproceedings{schmidt1996using,
+	title        = {Using shared memory for read-mostly {RPC} services},
+	author       = {Schmidt, Rene W and Levy, Henry M and Chase, Jeffrey S},
+	year         = 1996,
+	booktitle    = {Proceedings of HICSS-29: 29th Hawaii International Conference on System Sciences},
+	volume       = 1,
+	pages        = {141--149},
+	organization = {IEEE}
+}
+
+@inproceedings{dragojevic2014farm,
+	title        = {{FaRM}: Fast Remote Memory},
+	author       = {Aleksandar Dragojevi{\'c} and Dushyanth Narayanan and Miguel Castro and Orion Hodson},
+	year         = 2014,
+	month        = apr,
+	booktitle    = {11th USENIX Symposium on Networked Systems Design and Implementation (NSDI '14)},
+	publisher    = {USENIX Association},
+	address      = {Seattle, WA},
+	pages        = {401--414},
+	isbn         = {978-1-931971-09-6},
+	url          = {https://www.usenix.org/conference/nsdi14/technical-sessions/dragojevi{\'c}}
+}
+
+@inproceedings{zhou2022carbink,
+	title        = {Carbink: {Fault-Tolerant} Far Memory},
+	author       = {Zhou, Yang and Wassel, Hassan MG and Liu, Sihang and Gao, Jiaqi and Mickens, James and Yu, Minlan and Kennelly, Chris and Turner, Paul and Culler, David E and Levy, Henry M and others},
+	year         = 2022,
+	booktitle    = {16th USENIX Symposium on Operating Systems Design and Implementation (OSDI '22)},
+	pages        = {55--71}
+}
+
+@inproceedings{lee2022hydra,
+	title        = {Hydra: Resilient and highly available remote memory},
+	author       = {Lee, Youngmoon and Al Maruf, Hasan and Chowdhury, Mosharaf and Cidon, Asaf and Shin, Kang G},
+	year         = 2022,
+	booktitle    = {20th USENIX Conference on File and Storage Technologies (FAST '22)},
+	pages        = {181--198}
+}
+
+@inproceedings{ruan2020aifm,
+	title        = {{AIFM}: {High-Performance},{Application-Integrated} far memory},
+	author       = {Ruan, Zhenyuan and Schwarzkopf, Malte and Aguilera, Marcos K and Belay, Adam},
+	year         = 2020,
+	booktitle    = {14th USENIX Symposium on Operating Systems Design and Implementation (OSDI '20)},
+	pages        = {315--332}
+}
+
+@inproceedings{wang2021in,
+	title        = {In reference to {RPC}: it's time to add distributed memory},
+	author       = {Wang, Stephanie and Hindman, Benjamin and Stoica, Ion},
+	year         = 2021,
+	booktitle    = {Proceedings of the Workshop on Hot Topics in Operating Systems},
+	location     = {Ann Arbor, Michigan},
+	publisher    = {Association for Computing Machinery},
+	address      = {New York, NY, USA},
+	series       = {HotOS '21},
+	pages        = {191–198},
+	doi          = {10.1145/3458336.3465302},
+	isbn         = 9781450384384,
+	url          = {https://doi.org/10.1145/3458336.3465302},
+	abstract     = {RPC has been remarkably successful. Most distributed applications built today use an RPC runtime such as gRPC [3] or Apache Thrift [2]. The key behind RPC's success is the simple but powerful semantics of its programming model. In particular, RPC has no shared state: arguments and return values are passed by value between processes, meaning that they must be copied into the request or reply. Thus, arguments and return values are inherently immutable. These simple semantics facilitate highly efficient and reliable implementations, as no distributed coordination is required, while remaining useful for a general set of distributed applications. The generality of RPC also enables interoperability: any application that speaks RPC can communicate with another application that understands RPC.},
+	numpages     = 8
+}
+
+@inproceedings{nelson2015latency,
+	title        = {Latency-tolerant software distributed shared memory},
+	author       = {Nelson, Jacob and Holt, Brandon and Myers, Brandon and Briggs, Preston and Ceze, Luis and Kahan, Simon and Oskin, Mark},
+	year         = 2015,
+	booktitle    = {Proceedings of the 2015 USENIX Conference on USENIX Annual Technical Conference},
+	location     = {Santa Clara, CA},
+	publisher    = {{USENIX} Association},
+	address      = {USA},
+	series       = {USENIX ATC '15},
+	pages        = {291–305},
+	isbn         = 9781931971225,
+	abstract     = {We present Grappa, a modern take on software distributed shared memory (DSM) for in-memory data-intensive applications. Grappa enables users to program a cluster as if it were a single, large, non-uniform memory access (NUMA) machine. Performance scales up even for applications that have poor locality and input-dependent load distribution. Grappa addresses deficiencies of previous DSM systems by exploiting application parallelism, trading off latency for throughput. We evaluate Grappa with an in-memory MapReduce framework (10\texttimes{} faster than Spark [74]); a vertex-centric framework inspired by GraphLab (1.33\texttimes{} faster than native GraphLab [48]); and a relational query execution engine (12.5\texttimes{} faster than Shark [31]). All these frameworks required only 60-690 lines of Grappa code.},
+	numpages     = 15
+}
+
+@inproceedings{nobench,
+	title        = {Enabling {JSON} Document Stores in Relational Systems},
+	author       = {Craig Chasseur and Yinan Li and Jignesh M. Patel},
+	year         = 2013,
+	month        = {June},
+	booktitle    = {International Workshop on the Web and Databases},
+	url          = {https://pages.cs.wisc.edu/~jignesh/publ/argo-short.pdf}
+}
+
+@misc{ipoib,
+	title        = {Transmission of {IP} over {InfiniBand} ({IPoIB})},
+	author       = {Chu, Jerry and Kashyap, Vivek},
+	year         = 2006,
+	month        = apr,
+	publisher    = {RFC Editor},
+	series       = {Request for Comments},
+	number       = 4391,
+	doi          = {10.17487/RFC4391},
+	url          = {https://www.rfc-editor.org/rfc/rfc4391.txt},
+	howpublished = {\url{https://www.rfc-editor.org/rfc/rfc4391.txt}},
+	pagetotal    = 21,
+	abstract     = {This document specifies a method for encapsulating and transmitting IPv4/IPv6 and Address Resolution Protocol (ARP) packets over InfiniBand (IB). It describes the link-layer address to be used when resolving the IP addresses in IP over InfiniBand (IPoIB) subnets. The document also describes the mapping from IP multicast addresses to InfiniBand multicast addresses. In addition, this document defines the setup and configuration of IPoIB links.}
+}
+
+@inproceedings{amit2020don,
+	title        = {Don't shoot down {TLB} shootdowns!},
+	author       = {Amit, Nadav and Tai, Amy and Wei, Michael},
+	year         = 2020,
+	booktitle    = {Proceedings of the Fifteenth European Conference on Computer Systems},
+	pages        = {1--14}
+}
+
+@inproceedings{zhang2024dmrpc,
+	title        = {{DmRPC: Disaggregated Memory-aware Datacenter RPC for Data-intensive Applications}},
+	author       = {Jie Zhang and Xuzheng Chen and Yin Zhang and Zeke Wang},
+	year         = 2024,
+	month        = {May 13-17},
+	booktitle    = {40th IEEE International Conference on Data Engineering (ICDE)},
+	location     = {Utrecht, Netherlands},
+	publisher    = {IEEE},
+	address      = {Utrecht, Netherlands},
+	organization = {IEEE}
+}
+
+@inproceedings{vahldiek2019erim,
+	title        = {{ERIM}: Secure, Efficient In-process Isolation with Protection Keys ({MPK})},
+	author       = {Vahldiek-Oberwagner, Anjo and Elnikety, Eslam and Duarte, Nuno O and Sammler, Michael and Druschel, Peter and Garg, Deepak},
+	year         = 2019,
+	booktitle    = {28th USENIX Security Symposium (USENIX Security 19)},
+	pages        = {1221--1238}
+}
+
+@article{ramcloud,
+  title={The RAMCloud storage system},
+  author={Ousterhout, John and Gopalan, Arjun and Gupta, Ashish and Kejriwal, Ankita and Lee, Collin and Montazeri, Behnam and Ongaro, Diego and Park, Seo Jin and Qin, Henry and Rosenblum, Mendel and others},
+  journal={ACM Transactions on Computer Systems (TOCS)},
+  volume={33},
+  number={3},
+  pages={1--55},
+  year={2015},
+  publisher={ACM New York, NY, USA}
+}
+
+@inproceedings{khasgiwale2023shimmy,
+  title={Shimmy: Accelerating Inter-Container Communication for the IoT Edge},
+  author={Khasgiwale, Manan and Sharma, Vasu and Mishra, Shivakant and Thadichi, Biljith and John, Jaiber and Khanna, Rahul},
+  booktitle={GLOBECOM 2023-2023 IEEE Global Communications Conference},
+  pages={4461--4466},
+  year={2023},
+  organization={IEEE}
+}
