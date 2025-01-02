@@ -1,4 +1,4 @@
-#import "ucsd_thesis.typ": ucsd_thesis, ThesisBibliography
+#import "template.typ": ucsd_thesis, ThesisBibliography
 
 // Preamble chapters as variables make organization simpler
 #import "Chapters/abstract.typ": abstract

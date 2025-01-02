@@ -1,0 +1,3 @@
+[submodule "ucsd-thesis.typ"]
+	path = ucsd-thesis.typ
+	url = git@github.com:suyashmahar/ucsd-thesis.typ.git
