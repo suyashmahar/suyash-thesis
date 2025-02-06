@@ -1,22 +1,26 @@
 #import "../macros.typ": *
 
-Make sure the chapter introductions are more specifc than the thesis introduction and do not repeat the same stuff.
+// Make sure the chapter introductions are more specifc than the thesis introduction and do not repeat the same stuff.
 
-Recent memory technologies like CXL-based memory semantic SSDs~@samsung-ssd, NV-DIMMs~@nv-dimm, Intel Optane DC-PMM, and embedded non-volatile memories~@reram-soc have enabled byte- addressable, non-volatile storage devices. However, achieving crash consistency on these memory technologies often requires complex programming interfaces. Programmers must atomically update persistent data using failure-atomic transactions and carefully annotated LOAD and STORE operations, significantly increasing programming complexity~@liu2020cross.
-The `msync()` system call offers a simpler interface for durability. The programmer maps a file from the persistent media into the virtual memory and calls `msync()` to make any changes durable.
+Recent memory technologies like CXL-based memory semantic SSDs~@samsung-ssd, NV-DIMMs~@nv-dimm, Intel Optane DC-PMM, and embedded non-volatile memories~@reram-soc have enabled byte-addressable, non-volatile storage devices. However, achieving crash consistency on these memory technologies often requires complex programming interfaces. Programmers must atomically update persistent data using failure-atomic transactions and carefully annotated `LOAD` and `STORE` operations, significantly increasing programming complexity~@liu2020cross.
+In contrast to using failure-atomic transactions for crash-consistency, the failure-atomic
+`msync()` (FAMS) interface is much simpler as it transparently
+tracks updates and guarantees that modified data is atomically
+durable on a call to the failure-atomic variant of `msync()`. FAMS eliminates the need for annotating `LOAD`/`STORE` operations and also avoids wrapping updates to non-volatile data within failure-atomic transactions.
+
 
 The `msync()` interface, however, makes no crash-consistency guarantees. The OS is free to evict dirty pages from the page cache before the application calls `msync()`. A common workaround to this problem is to implement a write-ahead-log~@jhingran1992analysis@postgresql@kyotocabinet (WAL), which allows recovery from an inconsistent state after a failure. However, crash consistency with WAL requires an application to call `msync()`/`fsync()` multiple times to ensure application data is always recoverable to a consistent state after a crash.
 
-Park et al.~@failureatomicmsync overcome this limitation by enabling failure- atomicity for the `msync()` system call. Their implementation, FAMS (failure atomic `msync()`), holds off updates to the backing media until the application calls `msync()` and then leverages filesystem journaling to apply them atomically. FAMS is implemented within the kernel and relies on the OS to track dirty data in the page cache.
-OS-based implementation, however, suffers from several limitations:
+Park et al.~@failureatomicmsync overcome this limitation by enabling failure-atomicity for the `msync()` system call. Their implementation, FAMS (failure atomic `msync()`), holds off updates to the backing media until the application calls `msync()` and then leverages filesystem journaling to apply them atomically. FAMS is implemented within the kernel and relies on the OS to track dirty data in the page cache.
+The OS-based implementation, however, suffers from several limitations:
 
-1. Write-amplification on `msync()`: The OS tracks dirty data at page granularity, requiring a full page writeback even for a single-byte update, wasting memory bandwidth on byte- addressable persistent devices. // Using 2~MiB huge pages to reduce TLB pressure exacerbates this problem.
+1. Write-amplification on `msync()`: The OS tracks dirty data at page granularity, requiring a full page writeback even for a single-byte update, wasting memory bandwidth on byte-addressable persistent devices. // Using 2~MiB huge pages to reduce TLB pressure exacerbates this problem.
 2. Dirty page tracking overhead: FAMS relies on the page table to track dirty pages; thus, every `msync()` requires an expensive page table scan to find dirty pages to write to the backing media. // Moreover, since the OS is responsible for maintaining TLB coherency, the kernel must perform a TLB flush after clearing the access and dirty bits [9], adding significant overhead to every `msync()` call.
 3. Context switch overheads: Implementing crash consistency in the kernel (e.g., FAMS) adds context switch overhead to every `msync()` call, compounding the already high overhead of tracking dirty pages in current implementations. // While this overhead was acceptable for slower devices like HDDs, modern flash devices with 10s of µs of latency [10], this is a significant bottleneck.
 
-In this work, we address the shortcomings of FAMS with Snapshot, a drop-in, userspace implementation of failure atomic `msync()`. Snapshot transparently logs updates to memory-mapped files using compiler-generated instrumentation, implementing fast, fine-grained crash consistency. Snapshot tracks all updates in userspace and does not require switching to the kernel to update the backing media.
+#h(0.5in)In this work, we address the shortcomings of FAMS with Snapshot, a drop-in, userspace implementation of failure atomic `msync()`. Snapshot transparently logs updates to memory-mapped files using compiler-generated instrumentation, implementing fast, fine-grained crash consistency. Snapshot tracks all updates in userspace and does not require switching to the kernel to update the backing media.
 
-Snapshot works by logging `STORE`s transparently and makes updates durable on the next call to `msync()`. During runtime, the instrumentation checks whether the store is to a persistent file1and logs the data in an undo log.
+Snapshot works by logging `STORE`s transparently and makes updates durable on the next call to `msync()`. During runtime, the instrumentation checks whether the store is to a persistent file#footnote[We refer to a file stored on any byte-addressable storage media as a persistent file.] and logs the data in an undo log.
 
 Snapshot’s ability to automatically track modified data allows applications to be crash-consistent without significant programmer effort. For example, Snapshot’s automatic logging enables crash consistency for volatile data structures, like shared-memory allocators, with low-performance overhead.
 
@@ -28,39 +32,23 @@ Snapshot makes the following key contributions:
 
 3. Implementation space exploration for fast writeback. We study the latency characteristics of NT-stores and `clwb`s and use the results to tune Snapshot’s implementation and achieve better performance. These results are general and can help accelerate other crash-consistent applications.
 
-4. For b-tree insert and delete workloads running on Intel Optane DC-PMM, Snap- shot performs as well as PMDK and outperforms it on the read workload by 4.1$times$. Moreover, Snapshot outperforms non-crash-consistent `msync()` based implementation by 2.8$times$ with 4 KiB page size and 463.8$times$ with 2 MiB page size for inserts.
+4. For b-tree insert and delete workloads running on Intel Optane DC-PMM, Snapshot performs as well as PMDK and outperforms it on the read workload by 4.1$times$. Moreover, Snapshot outperforms non-crash-consistent `msync()` based implementation by 2.8$times$ with 4 KiB page size and 463.8$times$ with 2 MiB page size for inserts.
 
 // We compared Snapshot against PMDK and conventional `msync()` (as FAMS is not open-sourced) using Optane DC- PMM and emulated CXL-based memory semantic SSDs (DRAM backed by flash media over CXL [1]). For b-tree insert and delete workloads running on Intel Optane DC-PMM, Snap- shot performs as well as PMDK and outperforms it on the read workload by 4.1$times$. Moreover, Snapshot outperforms non-crash- consistent `msync()` based implementation by 2.8$times$ with 4 KiB page size and 463.8$times$ with 2 MiB page size for inserts. 
 
-5. For KV- Store, Snapshot outperforms PMDK by up to 2.2$times$ on Intel Op- tane and up to 10.9$times$ on emulated CXL-based memory semantic SSD. Finally, Snapshot performs as fast as and up to 8.0$times$ faster than Kyoto Cabinet’s custom crash-consistency implementation.
+5. For KV-Store, Snapshot outperforms PMDK by up to 2.2$times$ on Intel Optane and up to 10.9$times$ on emulated CXL-based memory semantic SSD. Finally, Snapshot performs as fast as and up to 8.0$times$ faster than Kyoto Cabinet’s custom crash-consistency implementation.
 
 #text(fill: white)[Remove me]
 #v(-2em)
 
 == Background and Motivation <sec:snapshot-background>
 
-// To understand how the `msync()`-based programming interface can work on persistent devices, the following section presents a brief survey of byte-addressable storage devices. This is followed by a discussion of crash consistency based on a semantically strengthened `msync()` interface. Finally, we discuss an existing implementation of crash-consistent `msync()`, FAMS, and its limitations.
+To understand how the `msync()`-based programming interface can work on persistent devices, the following section presents a discussion of crash consistency based on a semantically strengthened `msync()` interface. Finally, we discuss an existing implementation of crash-consistent `msync()`, FAMS, and its limitations.
 
-#figure(
+#place(top, float: true, [#figure(
   image("../Figures/Snapshot/msyncoverhead-breakdown.svg", width: 50%),
-  caption: [`msync`-based KV-Store perf. breakdown (4~KiB and 2~MiB pages).]
-)<msyncoverhead-breakdown>
-
-// #figure(
-//   caption: [Byte-addressable, persistent storage devices.],
-//   table(
-//     columns: (auto, auto, auto),
-//     // inset: 10pt,
-//     align: horizon,
-//     table.header(
-//       [*Device*], [*Interface*], [*Technology*]
-//     ),
-//     [Optane PM], [Mem. Bus], [PM & Internal caches~@wang2023nvleak],
-//     [Mem. Semantic SSDs~@samsung-ssd], [CXL], [Flash + Large DRAM cache],
-//     [NV-DIMMs~@nv-dimm], [Mem. Bus], [DRAM],
-//     [Embedded NVM~@reram-soc], [Internal Bus], [ReRAM]
-//   )
-// ) <fig:persistent-mem-devices>
+  caption: [`msync`-based KV-Store performance breakdown (4~KiB and 2~MiB pages).]
+)<msyncoverhead-breakdown>])
 
 
  \
@@ -74,21 +62,22 @@ Snapshot makes the following key contributions:
 === Filesystem-based Durability and msync
 
 The POSIX `msync()` system call guarantees persistency but provides no atomicity. Part of the dirty data can reach the storage device before the application calls `msync()`.
-To achieve atomicity, applications often use a write-ahead-log (WAL) @sqlite-wal @kyotocabinet to write the modified data to a log and then change the memory location in place. Applications (e.g., Kyoto Cabinet @kyotocabinet) issue two `msync()` every time they need to atomically update a mapped file, one to persist the write-ahead- log and the second to persist the application updates. Once the data is updated and durable with `msync()`, the application can drop the log.
+To achieve atomicity, applications often use a write-ahead-log (WAL) @sqlite-wal @kyotocabinet to write the modified data to a log and then change the memory location in place. Applications (e.g., Kyoto Cabinet @kyotocabinet) issue two `msync()` every time they need to atomically update a mapped file, one to persist the write-ahead-log and the second to persist the application updates. Once the data is updated and durable with `msync()`, the application can drop the log.
 Although applications using `msync()` and WAL to achieve crash consistency directly run off of DRAM (when memory-mapped), they suffer from the overhead of context switches, page table scanning (for finding dirty pages), and TLB shootdowns (to clear access/dirty bit for the page table). This overhead is negligible compared to the access latency of disks and SSDs, but when running on NVM or memory semantic SSDs, the overhead of performing an `msync()` dominates the application's runtime. #ref(<msyncoverhead-breakdown>) shows the % of runtime spent on the `msync()` call, the context switch overhead for the `msync()` call, and the TLB shootdown overhead across the YCSB workloads for PMDK's KV-Store, modified to use `msync()`. For 2~MiB pages, `msync()`'s overhead is up to 100% of the execution runtime.
-With DAX-mapped files, although application `LOAD`s and `STORE`s are directly to the storage media (e.g., Optane) and filtered through caches, the `msync()` system call still provides no atomic durability guarantee. On `msync()`on a DAX- mapped file, the kernel simply flushes the cachelines of all dirty pages to the persistent device.
+With DAX-mapped files, although application `LOAD`s and `STORE`s are directly to the storage media (e.g., Optane) and filtered through caches, the `msync()` system call still provides no atomic durability guarantee. On `msync()`on a DAX-mapped file, the kernel simply flushes the cachelines of all dirty pages to the persistent device.
 
-#figure(
+#place(top, float: true, [#figure(
+  placement: top,
   image("../Figures/Snapshot/cam-ready-cxlbuf-comparison.svg", width: 80%),
   caption: [Comparison of PM programming techniques using an append() function that appends a new entry at the end of a persistent array. `msync()` calls in (b) and (c) persist the entire write-containing memory range.]
-)<cxlbuf-comparison>
+)<cxlbuf-comparison>])
 
 Programmers can use a userspace transactional interface (e.g., PMDK) to avoid performance bottlenecks of the `msync()` system call. While this helps with the software overhead, PMDK requires programmers to carefully annotate variables, wrap operations in transactions, and use non-standard pointers. These additional requirements make crash-consistent programming with PMDK hard~@corundum and error-prone @liu2020cross@neal2020agamotto@liu2021pmfuzz@Liu:2019:PAF@gorjiara2021jaaru.
 
 === Programming with FAMS
 
-FAMS fixes shortcomings of the POSIX `msync()` and simplifies crash consistency with a failure-atomic `msync()` interface. FAMS lets the programmer call `msync()` to guaran- tee that the updates since the last call to `msync()` are made atomically durable. Despite FAMS's simpler programming model, its kernel-based implementation suffers from perfor- mance overheads.
-#ref(<cxlbuf-comparison>) compares PMDK, traditional `msync()`-based WAL~@sqlite-wal@kyotocabinet, and FAMS using an `append()` method for an array. Unlike PMDK or `msync()`, FAMS does not require the programmer to manually log updates either using an undo- log or a write-ahead log.
+FAMS fixes shortcomings of the POSIX `msync()` and simplifies crash consistency with a failure-atomic `msync()` interface. FAMS lets the programmer call `msync()` to guarantee that the updates since the last call to `msync()` are made atomically durable. Despite FAMS's simpler programming model, its kernel-based implementation suffers from performance overheads.
+#ref(<cxlbuf-comparison>) compares PMDK, traditional `msync()`-based WAL~@sqlite-wal@kyotocabinet, and FAMS using an `append()` method for an array. Unlike PMDK or `msync()`, FAMS does not require the programmer to manually log updates either using an undo-log or a write-ahead log.
 In the FAMS variant (#ref(<cxlbuf-comparison>)c), the application maps a file into its address space. Next, the application updates the mapped data using `LOAD`s and `STORE`s (Line 3) and, finally, calls `msync()` when the data is in a consistent state (Line 5). FAMS ensures that the backing file always reflects the most recent successful `msync()` call, which contains a consistent state of application data from which the application may recover.
 FAMS implements failure-atomicity for a file by disabling writebacks from the page cache. When an application calls `msync()` on a memory-mapped file, FAMS uses the JBD2 layer of `Ext4` to journal both metadata and data for the file. In contrast, PMDK and WAL-based crash consistency require programmers to annotate updated memory locations manually. Lines 4-5, #ref(<cxlbuf-comparison>)a for PMDK, and Lines 3-7, #ref(<cxlbuf-comparison>)b for WAL-based crash consistency. While PMDK's C++ interface does alleviate some of these limitations, it still requires the use of annotations and fat-pointers, e.g., `persistent_ptr<MyClass> obj`.
 Despite FAMS's simpler programming interface, applications
@@ -96,13 +85,16 @@ still suffer from kernel-based durability's performance overhead (e.g., context 
 
 == Overview <snapshot-overview>
 
-Snapshot overcomes FAMS's limitations by providing a drop-in, userspace implementation of failure atomic , resulting in a significant performance improvement for crash- consistent applications. To provide low overhead durability, Snapshot introduces a compiler-based mechanism to track dirty data in userspace. Snapshot records these updates in an undo that is transparent to the programmer. On `msync()`, Snapshot updates the persistent storage locations recorded in the log. In case of a failure, Snapshot can use the log to roll back any partially durable data.
-Since Snapshot is implemented in userspace, it avoids the overhead of switching to the kernel and managing TLB coherency. Using Snapshot, the application synchronously modifies data only on the DRAM, speeding up the execution. At the same time, Snapshot maintains a persistent copy on the backing media and automatically propagates all changes to the persistent copy on an .
-As Snapshot is built on the  interface, programmers can port any conventional application written for - based crash consistency with minimal effort to benefit from automatic dirty-data tracking while significantly improving runtime performance. Snapshot's userspace implementation enables legacy disk-based applications to take advantage of faster access times and direct-access (DAX) storage without requiring extensive application rewrites.
+Snapshot overcomes FAMS's limitations by providing a drop-in, userspace implementation of failure atomic `msync()`, resulting in a significant performance improvement for crash-consistent applications. To provide low overhead durability, Snapshot introduces a compiler-based mechanism to track dirty data in userspace. Snapshot records these updates in an undo that is transparent to the programmer. On `msync()`, Snapshot updates the persistent storage locations recorded in the log. In case of a failure, Snapshot can use the log to roll back any partially durable data.
+Since Snapshot is implemented in userspace, it avoids the overhead of switching to the kernel and managing TLB coherency. Using Snapshot, the application synchronously modifies data only on the DRAM, speeding up the execution. At the same time, Snapshot maintains a persistent copy on the backing media and automatically propagates all changes to the persistent copy on an `msync()`.
+
+As Snapshot is built on the `msync()` interface, programmers can port any conventional application written for `msync()`-based crash consistency with minimal effort to benefit from automatic dirty-data tracking while significantly improving runtime performance. Snapshot's userspace implementation enables legacy disk-based applications to take advantage of faster access times and direct-access (DAX) storage without requiring extensive application rewrites.
 
 == Implementation
 
-Snapshot is implemented as a combination of its compiler pass and a runtime library, `libsnapshot`. Snapshot's com- piler instruments every store instruction that can write to the heap using a call to an undo-log function. The runtime library, `libsnapshot`, provides runtime support for Snapshot: implementing the logging function and Snapshot's `msync()`. Next, we will discuss how the programming interface and logging for Snapshot are implemented, followed by the various optimizations possible in Snapshot to improve its performance.
+Snapshot is implemented as a combination of its compiler pass and a runtime library, `libsnapshot`. Snapshot's compiler instruments every store instruction that can write to the heap using a call to an undo-log function. The runtime library, `libsnapshot`, provides runtime support for Snapshot: implementing the logging function and Snapshot's `msync()`. 
+
+Next, we will discuss how the programming interface and logging for Snapshot are implemented, followed by the various optimizations possible in Snapshot to improve its performance.
 
 === Logging, Instrumentation, and `msync()`
 
@@ -114,35 +106,30 @@ While Snapshot maintains per-thread logs, calls to `msync()` persist data from a
 
 #BoldParagraph[Log Format.]  Logs in Snapshot are per-thread and store only the minimal amount of information needed to undo an interrupted `msync()`. Logs hold their current state, that is, whether a log holds a valid value. The log also maintains a tail that points to the next free log entry and the size of the log for use during recovery. Each log entry in the log is of variable length. The log entry consists of the address, its size in bytes, and the original value at the address.
 
-While Snapshot tracks all store operations to the memory- mapped region, POSIX calls such as `memcpy()`, and `memmove()` are not instrumented as they are part of the OS-provided libraries. To solve this, `libsnapshot` wraps the calls to `memcpy()`, `memmove()`, and `memset()` to log them directly and then calls the corresponding OS-provided function. While Snapshot catches some of these functions, applications relying on other functions, e.g., `strtok()`, would need to recompile standard libraries (`glibc`, `muslc`, etc.) with Snapshot to be crash-consistent.
+While Snapshot tracks all store operations to the memory-mapped region, POSIX calls such as `memcpy()`, and `memmove()` are not instrumented as they are part of the OS-provided libraries. To solve this, `libsnapshot` wraps the calls to `memcpy()`, `memmove()`, and `memset()` to log them directly and then calls the corresponding OS-provided function. While Snapshot catches some of these functions, applications relying on other functions, e.g., `strtok()`, would need to recompile standard libraries (`glibc`, `muslc`, etc.) with Snapshot to be crash-consistent.
 
-#BoldParagraph[Logging Design Choices.] Despite implementing undo- logging, Snapshot only needs two fences per `msync()` to be crash-consistent, as it does not need to wait for the undo-logs to persist before modifying the DRAM copy. This contrasts with PMDK (which also implements undo-logging), where every log operation needs a corresponding fence to ensure the location is logged before modifying it in place. Redo-logging persistent memory libraries eliminate this limitation and only need two fences per transaction. Redo logging, however, requires the programmer to interpose both the loads and stores to redirect them to the log during a transaction, resulting in higher runtime overhead. Snapshot, on the other hand, only interposes store instructions which always write only to the DRAM and avoids any redirection.
+#BoldParagraph[Logging Design Choices.] Despite implementing undo-logging, Snapshot only needs two fences per `msync()` to be crash-consistent, as it does not need to wait for the undo-logs to persist before modifying the DRAM copy. This contrasts with PMDK (which also implements undo-logging), where every log operation needs a corresponding fence to ensure the location is logged before modifying it in place. Redo-logging persistent memory libraries eliminate this limitation and only need two fences per transaction. Redo logging, however, requires the programmer to interpose both the loads and stores to redirect them to the log during a transaction, resulting in higher runtime overhead. Snapshot, on the other hand, only interposes store instructions which always write only to the DRAM and avoids any redirection.
 
 === Optimizing Snapshot
 
 Snapshot includes a range of optimizations to maximize its performance. In particular, it must address challenges related to the cost of range tracking and reducing the required instrumentation.
 
-==== Low-cost Range Tracking
-
+#BoldParagraph[Low-cost Range Tracking]
 Since Snapshot's compiler has limited information about the destination of a `STORE`, on every call, the instrumentation checks if the logging request is to a memory-mapped persistent file. Snapshot simplifies this check by reserving virtual address ranges for DRAM (DRAM range) and the backing memory (persistent range) when the application starts. Reserving ranges on application start makes checks for write operations a simple range check. In our implementation, we reserve 1~TiB of virtual address space for both ranges to map all persistent-device-backed files. This range is configurable and is limited only by the kernel's memory layout. Further, copying a location from DRAM to the backing media now only needs simple arithmetic, i.e., copy from offset in the DRAM range to the same offset in the persistent range.
 
-==== Fewer Instrumentations
-
+#BoldParagraph[Fewer Instrumentations]
 Instrumenting stores indiscriminately results in useless calls for stores that cannot write to persistent locations (e.g., stack addresses). Snapshot reduces this overhead by tracking all stack allocations in a function at the LLVM IR level during compilation. Next, Snapshot instruments only those stores that may not alias with any stack-allocated addresses, reducing the amount of unnecessary instrumentation.
 
-#figure(
+#place(top, float: true, [#figure(
   image("../Figures/Snapshot/clwbvsntstore.svg", width: 80%),
   caption: [Speedup of NT-stores over `clwb` instructions for PM
     writes. NT-stores always outperform write+`clwb`.]
-)<clwbsntstore>
+)<clwbsntstore>~])
 
-\
+===	Optimizing Backing Memory Accesses<sec:snapshot-opt-backing>
+Flush and fence instructions needed to ensure crash consistency add significant runtime overhead. To understand and reduce this overhead, we study the relative latency of write+`clwb` vs. NT-Store instructions and find that non-temporal stores, particularly those that align with the bus's transfer size, result in considerable performance improvement over the `clwb` instruction.
 
-===	Optimizing Backing Memory Accesses
-
-Flush and fence instructions needed to ensure crash consistency add significant runtime overhead. To understand and reduce this overhead, we study the relative latency of write+`clwb` vs. NT-Store instructions and find that non- temporal stores, particularly those that align with the bus's transfer size, result in considerable performance improvement over the `clwb` instruction.
-
-While we perform  the experiments on Intel Optane DC-PMM, we expect the results and methodology to be similar on other storage devices as they have similar memory hierarchies (volatile caches backed by byte-addressable storage devices). #ref(<clwbsntstore>) shows the latency improvement from using NT- Stores to update PM data vs. using writes followed by `clwb`s. The heatmap measures the latency of the operation while varying both the write size, that is, the amount of data written, and the frequency of the fence operation (`sfence`).
+While we perform  the experiments on Intel Optane DC-PMM, we expect the results and methodology to be similar on other storage devices as they have similar memory hierarchies (volatile caches backed by byte-addressable storage devices). #ref(<clwbsntstore>) shows the latency improvement from using NT-Stores to update PM data vs. using writes followed by `clwb`s. The heatmap measures the latency of the operation while varying both the write size, that is, the amount of data written, and the frequency of the fence operation (`sfence`).
 
 From #ref(<clwbsntstore>), we observe that NT-Stores consistently outperform store+`clwb`. Moreover, the performance gap between `clwb`s and NT-Stores increases as the fence interval increases. In contrast, when the write size is increased, the performance only increases until the write size matches the DDR-T transaction size (256~B). Since the CXL protocol uses 64~B packet size for v1-2 and 256~B for CXL v3, we expect to see maxima for those sizes for CXL-based byte-addressable storage devices.
 
@@ -153,27 +140,26 @@ While it is possible to split the log to separate log entry's data into a differ
 
 === Memory Allocator
 
-While Snapshot provides a failure atomic `msync()`, applications need to allocate and manage memory in a memory-mapped file. Shared memory allocators, like `boost.interprocess`~@boost.interprocess, provide an easy way to man- age memory in a memory-mapped file by providing `malloc()` and free()-like API. These operations, while enable memory management, are not crash-consistent.
-However, Snapshot's ability to automatically log all updates to the persistent memory, enables applications to use volatile shared memory allocators for allocating memory in a crash- consistent manner.
+While Snapshot provides a failure atomic `msync()`, applications need to allocate and manage memory in a memory-mapped file. Shared memory allocators, like `boost.interprocess`~@boost.interprocess, provide an easy way to manage memory in a memory-mapped file by providing `malloc()` and `free()`-like API. These operations, while enable memory management, are not crash-consistent.
+However, Snapshot's ability to automatically log all updates to the persistent memory, enables applications to use volatile shared memory allocators for allocating memory in a crash-consistent manner.
 To demonstrate Snapshot's utility, we use Snapshot to enable `boost.interprocess` to function as a persistent memory allocator. `boost.interprocess` allocates objects from a memory-mapped file, provides API to access the root object as a pointer, and allocate/free objects while Snapshot tracks updates and makes changes atomically durable on an `msync()`.
 
-==== Decoupling Memory Allocator and Logging 
-
+#BoldParagraph[Decoupling Memory Allocator and Logging]
 Unlike traditional PM programming libraries that couple memory allocators and logging techniques, Snapshot permits any combination of a logging technique and a memory allocator. For example, PMDK's allocator only supports redo logging. Restricting the programmer to the specific characteristics of their implementation. On the other hand, Snapshot provides programmer the ability to independently choose the memory allocator and logging technique, suiting the specific needs of the workload.
 
 === Putting it all Together
 
 
-#figure(
+#place(top, float: true, [#figure(
   image("../Figures/Snapshot/cxlbuf-single-col.svg", width: 80%),
   caption: [Instrumented binary
 calls `libsnapshot.so`'s logging function for every store. Changes are atomically durable on `msync()`.]
-)<fig:cxlbuf-working>
+)<fig:cxlbuf-working>~])
 
 To see how snapshot works in practice, consider an array `append()` function that takes a value and inserts it into the next available slot in the array. @fig:cxlbuf-working shows the implementation of this function along with the memory and log states as the program executes. In the example, the instrumented program automatically undo-logs the updated location (i.e., call to `logRange`). For brevity, we only show updates to the array element, not the array size.
 
 
-When the program starts executing #CircledNumber(1), the instrumentation calls the logging function with the address of updated locations (`&arr[arr->sz]` and `&arr->sz`), and update sizes. The function logs the address by creating a new entry in the thread- local undo log.
+When the program starts executing #CircledNumber(1), the instrumentation calls the logging function with the address of updated locations (`&arr[arr->sz]` and `&arr->sz`), and update sizes. The function logs the address by creating a new entry in the thread-local undo log.
 
 Next,	#CircledNumber(2) the program continues and updates memory locations. Since the program directly interacts only with the DRAM, the value in the DRAM is updated, but the value in the backing memory (e.g., PM) is unchanged. Finally, the application calls `msync()` to update the backing memory. On this call, Snapshot iterates over the log to find all locations that have been updated and uses them to copy updates from DRAM to PM. After updating PM with the values from DRAM, Snapshot drops the log by marking it as invalid. Once `msync()` returns, any failure would reflect the persistent state of the most recent `msync()`.
 
@@ -196,7 +182,7 @@ Implementation of failure atomic `msync()` by Verma et al. on AdvFS~@verma2015fa
 Since `famus_snap` is orders of magnitude slower than `msync()`, we do not evaluate it further.
 
 
-#figure(
+#place(auto, float: true, [#figure(
   caption: [Evaluated configurations.],
   table(
       columns: (auto, auto, auto, auto, auto),
@@ -208,14 +194,14 @@ Since `famus_snap` is orders of magnitude slower than `msync()`, we do not evalu
       ),
       [PMDK], [Intel's PMDK-based implementation.], [Programmer (byte)], green_check, [PM],
       [Snapshot-NV], [Snapshot, tracking using undo-log.], [Auto., (byte)], green_check, [DRAM],
-      [Snapshot], [Snapshot, tracking using a volatile list (Section IV-C).], [Auto., (byte)], green_check, [DRAM],
+      [Snapshot], [Snapshot, tracking using a volatile list (@sec:snapshot-opt-backing).], [Auto., (byte)], green_check, [DRAM],
       [msync() 4~KiB], [Page cache mapped, 4~KiB pages.], [Auto., OS (4KiB)], red_cross, [DRAM],
       [msync() 2~MiB], [Page cache mapped, 2~MiB pages.], [Auto., OS (2MiB)], red_cross, [DRAM],
       [msync() data \ journal], [Page cache, `ext4(data=journal)`, 4~KiB Pages.], [Auto., OS (4 KiB)], red_cross, [DRAM]
   )
-)<snapshot-eval-config>
+)<snapshot-eval-config>])~
 
-#figure(
+#place(auto, float: true, [#figure(
   caption: [System configuration.],
   table(
       columns: (auto, auto, auto),
@@ -230,22 +216,22 @@ Since `famus_snap` is orders of magnitude slower than `msync()`, we do not evalu
       [Build system], [LLVM/Clang], [13.0.1],
       [Block Device], [Intel Optane SSD DC P4800X], [For emulation]
   )
-)<snapshot-sys-config> \
+)<snapshot-sys-config>])~
 
 === Configuration
 
-@snapshot-eval-config lists the six different configurations we use to compare the performance of Snapshot. With PMDK, the workloads are implemented using its software transactional memory implementation. The Snapshot-NV and Snapshot implementations are similar, with the difference in how they track dirty data in DRAM. The Snapshot-NV implementation uses the undo log to flush the dirty data on a call to `msync()`. In comparison, the Snapshot implementation uses a separate, volatile list to flush the dirty data (Section IV-C). All implementations of Snapshot otherwise have this optimization enabled. @snapshot-sys-config lists the configuration used for all experiments in the results section.
+@snapshot-eval-config lists the six different configurations we use to compare the performance of Snapshot. With PMDK, the workloads are implemented using its software transactional memory implementation. The Snapshot-NV and Snapshot implementations are similar, with the difference in how they track dirty data in DRAM. The Snapshot-NV implementation uses the undo log to flush the dirty data on a call to `msync()`. In comparison, the Snapshot implementation uses a separate, volatile list to flush the dirty data (@sec:snapshot-opt-backing). All implementations of Snapshot otherwise have this optimization enabled. @snapshot-sys-config lists the configuration used for all experiments in the results section.
 
 
 === Evaluating Snapshot on CXL-based Memory Semantic SSDs
 <sec:mem-sem-ssd>
 
 
-#figure(
+#place(top, float: true, [#figure(
   image("../Figures/Snapshot/emulated-ssd.svg", width: 100%),
   caption: [Speedup of NT-stores over `clwb` instructions for PM
     writes. NT-stores always outperform write+`clwb`.]
-)<fig:memsemssd>\
+)<fig:memsemssd>])
 
 CXL-attached memory semantic SSDs~@samsung-ssd are CXL-based devices with a large DRAM cache backed by a block device.
 These devices appear as memory devices to the host processor and support byte-addressable accesses.
@@ -259,10 +245,10 @@ Our implementation has a 14.3~µs random access latency at a 91.8% DRAM cache mi
 === Microbenchmarks
 
 
-#figure(
+#place(top, float: true, [#figure(
   image("../Figures/Snapshot/instrumentation-overhead-heatmap.svg", width: 100%),
   caption: [Speedup of NT-stores over `clwb` instructions for PM writes. NT-stores always outperform write+`clwb`.]
-)<snapshot-inst-overhead-heatmap>\
+)<snapshot-inst-overhead-heatmap>~])
 
 Next, we use microbenchmarks to study how Snapshot's store instrumentation affects performance.
 To understand the instrumentation overhead of Snapshot, we run it with and without instrumentation and logging enabled. @snapshot-inst-overhead-heatmap shows the performance of different variants of Snapshot relative to the "No Instrumentation" variant running the YCSB workload. The "Logging call: no-op" variant returns from the logging call without performing any checks or logging. The "Logging call: range check only" measures the execution where the logging call only performs the range check but does not log any data. Finally, the "No instrumentation" variant is compiled without Snapshot's compiler pass and thus has no function call overhead. Among these, only Snapshot logs the modifications and is crash-consistent. In all other variants, a call to `msync()` is a no-op.
@@ -276,11 +262,13 @@ The results show that even with the compiler's limited information about a store
 
 We evaluate several applications to show that Snapshot consistently outperforms PMDK across various workloads and POSIX `msync()` on write-heavy workloads when running on Intel Optane DC-PMM. Workloads include a linked list and a b-tree implementation from Intel's PMDK, PMDK's KV-Store using the YCSB workload, and Kyoto Cabinet.
 
-#figure(grid(columns: 2, row-gutter: 2mm, column-gutter: 1mm,
+#place(top, float: true, [#figure(grid(columns: 2, row-gutter: 2mm, column-gutter: 1mm,
   image("../Figures/Snapshot/linkedlist.svg", width: 75%), image("../Figures/Snapshot/map.btree.svg", width: 75%),),
+  placement: bottom,
+  scope: "parent",
 
   caption: "Performance comparison of PMDK, Snapshot, and msync() on Intel Optane DC-PMM. Higher is better."
-)<fig:snapshot-linkedlist-btree>\
+) <fig:snapshot-linkedlist-btree>~])
 
 #BoldParagraph[Linked List] #ref(<fig:snapshot-linkedlist-btree>)a shows the performance of a linked list data structure implemented using PMDK, traditional `msync()` with 4~KiB and 2~MiB page size, `msync()` with data journal, and Snapshot. Insert inserts a new node to the tail of the list, Delete removes a node from the head, and Traverse visits every node and sums up the values. PMDK and Snapshot are crash-consistent, while the `msync()` implementations are not. Each operation is repeated 1 million times.
 Since Snapshot runs the application entirely on DRAM and performs userspace synchronization with the backing media on a call to `msync()`, it significantly outperforms PMDK on Traverse workload while being competitive in Insert and Delete. On every call to `msync()`, the traditional filesystem implementation needs to perform an expensive context switch and TLB shootdown, slowing it considerably compared to PMDK and Snapshot.
@@ -320,30 +308,30 @@ Since Snapshot runs the application entirely on DRAM and performs userspace sync
 
 @fig:snapshot-simplekv shows the performance of the KV-store against PMDK using different Snapshot configurations described in @snapshot-sys-config. For Snapshot, we present the results using volatile and non-volatile lists for finding modified cachelines on `msync()`. Overall, Snapshot shows between 1.2$times$ and 2.2$times$ performance improvement over PMDK.
 
-Against `msync()`, Snapshot shows a significant performance improvement, especially when compared to `msync()` with data journal enabled. Snapshot does this while providing an automatic crash-consistency guarantee. Moreover, several Snapshot optimizations, including using a separate volatile list for tracking dirty data in the memory (Section IV-C) provide considerable improvement to Snapshot's performance.
+Against `msync()`, Snapshot shows a significant performance improvement, especially when compared to `msync()` with data journal enabled. Snapshot does this while providing an automatic crash-consistency guarantee. Moreover, several Snapshot optimizations, including using a separate volatile list for tracking dirty data in the memory (@sec:snapshot-opt-backing) provide considerable improvement to Snapshot's performance.
 
 
-#figure(
+#place(top, float: true, [#figure(
   image("../Figures/Snapshot/kyoto-tx.svg", width: 90%),
   caption: [Performance comparison of commit frequency for writes in Kyoto Cabinet on Intel Optane DC-PMM. Average of six runs. Lower is better.]
-)<fig:snapshot-kyoto-tx>\
+)<fig:snapshot-kyoto-tx>~])
 
-#BoldParagraph[Kyoto Cabinet] @fig:snapshot-kyoto-tx shows the performance comparison between Kyoto Cabinet's built-in WAL+`msync()` based crash- consistency mechanism and Snapshot with a varying number of updates per transaction. Overall, Snapshot outperforms Kyoto's transaction implementation by 1.4$times$ to 8.0$times$.
+#BoldParagraph[Kyoto Cabinet] @fig:snapshot-kyoto-tx shows the performance comparison between Kyoto Cabinet's built-in WAL+`msync()` based crash-consistency mechanism and Snapshot with a varying number of updates per transaction. Overall, Snapshot outperforms Kyoto's transaction implementation by 1.4$times$ to 8.0$times$.
 
 For crash consistency, Kyoto Cabinet combines WAL and `msync()`. For the Snapshot version, we disable Kyoto Cabinet's WAL implementation. This version, when compiled with Snapshot's compiler, is automatically crash-consistent.
 
 === CXL-Based Memory Semantic SSDs
 
 
-#figure(grid(columns: 3, row-gutter: 2mm, column-gutter: 2mm,
+#place(top, float: true, [#figure(grid(columns: 3, row-gutter: 2mm, column-gutter: 2mm,
   image("../Figures/Snapshot/linkedlist.mss.svg", width: 100%), image("../Figures/Snapshot/map.btree.mss.svg", width: 100%),
   image("../Figures/Snapshot/simplekv.mss.svg", width: 100%),
 ),
 
-  caption: [Linked list, b-tree and KV-store on Emulated Memory Semantic SSD (@sec:mem-sem-ssd). Lower is better.]
-)<fig:snapshot-mem-sem-results>\
+  caption: [Linked list, b-tree and KV-store on Emulated Memory Semantic SSD (@sec:mem-sem-ssd). Lower is better.],
+)<fig:snapshot-mem-sem-results>~])
 
-We evaluate Linked list, B-tree, and KV-Store on our emulated memory semantic SSD and observe that Snapshot significantly outperforms PMDK for linked list and b-tree (Figure 10). For linked list, Snapshot outperforms PMDK by 1.7$times$, 3.2$times$, and 171.0$times$ for insert, delete, and read, respectively. For b-tree, Snapshot outperforms PMDK by 3.4$times$, 4.1$times$, and
+We evaluate Linked list, B-tree, and KV-Store on our emulated memory semantic SSD and observe that Snapshot significantly outperforms PMDK for linked list and b-tree (@fig:snapshot-mem-sem-results). For linked list, Snapshot outperforms PMDK by 1.7$times$, 3.2$times$, and 171.0$times$ for insert, delete, and read, respectively. For b-tree, Snapshot outperforms PMDK by 3.4$times$, 4.1$times$, and
 364.5$times$ for insert, delete, and read workloads, respectively.
 
 For the KV-Store benchmark, Snapshot outperforms PMDK by up to 10.9$times$ for all but the 'E' workload, where PMDK is 1.23$times$ faster. As our emulation is software-based, it does not support the `msync()` system call, so we did not evaluate Kyoto Cabinet.
@@ -358,7 +346,7 @@ Many prior works have proposed techniques to simplify the persistent memory prog
 
 Libnvmmio~@libnvmmio provides an `msync()`-based interface, but it does so by intercepting filesystem IO calls, e.g., read() and write(). Thus, unlike Snapshot, Libnvmmio does not support the memory-mapped file interface. Similarly, DudeTM~@dudetm, while uses a memory-mapped interface and stages working copy in the DRAM, requires the programmer to use a PMDK-like transactional interface, increasing programming effort.
 
-Automated solutions like a compiler pass to simplify the programming effort include Atlas~@atlas, which adds crash- consistency to existing lock-based programs by using the outermost lock/unlock operations. Synchronization Free Regions (SFR)~@gogte2018sfr extend this idea and provide failure-atomicity between every synchronization primitive and system call.
+Automated solutions like a compiler pass to simplify the programming effort include Atlas~@atlas, which adds crash-consistency to existing lock-based programs by using the outermost lock/unlock operations. Synchronization Free Regions (SFR)~@gogte2018sfr extend this idea and provide failure-atomicity between every synchronization primitive and system call.
 
 Similarly, some works use language support to automatically add persistence to applications written for volatile memory. Breeze~@breeze uses compiler instrumentation for logging updates to PM but requires the programming to explicitly wrap code regions in transactions and annotate PM objects. NVTraverse~@friedman200nvtraverse and Mirror~@friedman2021mirror convert lock-free data structures persistent using programmer annotation and providing special compare and swap operations.
 

@@ -1,4 +1,3 @@
-
 #import "macros.typ" : *
 
 #set page(

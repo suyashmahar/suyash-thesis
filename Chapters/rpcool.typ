@@ -1,6 +1,10 @@
 #import "../macros.typ": *
 
-Communication within the datacenter needs to be fast, efficient, and secure against unauthorized access, rogue actors, and buggy programs. Remote procedure calls (RPCs)@grpc@thriftrpc are a popular way of communicating between independent applications and make up a significant portion of datacenter communication, particularly among microservices@barroso2003web@luo2021characterizing. However, RPCs require substantial resources to serve today's datacenter communication needs. For instance, Google reports@google-rpc-study that in the tail (e.g., P99), requests spend over 25% of their time in the RPC stack. One of the significant sources of RPC latency is their need to serialize/deserialize and compress/decompress data before/after transmission.
+
+The advent of PMEM is not the only change to appear in modern memory systems over the last decade. Alongside persistent memory, another technology, Compute Express Link (CXL) has emerged as an advancement in the way devices and hosts communicate and share memory. CXL enables multiple devices and hosts to share the same region of memory with hardware-implemented cache coherence.
+
+While persistent memory has blurred the distinction between memory and storage, datacenter communication still struggles with the limitations of traditional serial networking.
+Communication within the datacenter needs to be fast, efficient, and secure against unauthorized access, rogue actors, and buggy programs. Remote procedure calls (RPCs)~@grpc@thriftrpc are a popular way of communicating between independent applications and make up a significant portion of datacenter communication, particularly among microservices~@barroso2003web@luo2021characterizing. However, RPCs require substantial resources to serve today's datacenter communication needs. For instance, Google reports~@google-rpc-study that in the tail (e.g., P99), requests spend over 25% of their time in the RPC stack. One of the significant sources of RPC latency is their need to serialize/deserialize and compress/decompress data before/after transmission.
 
 Shared memory offers an exciting alternative by enabling multiple containers on the same host to share a region of memory without any explicit copies behind the scenes. While applications can send RPCs by serializing and copying data to the shared memory region, an attractive alternative is to share pointers to the original data, significantly lowering their CPU usage.
 
@@ -8,27 +12,27 @@ However, accesses to shared memory raise several safety concerns. Shared memory 
 
 Additionally, if applications share pointer-rich data structures over shared memory, they need to take special care in making sure the pointers are not invalid or dangling.
 
-To solve these issues, we propose MemRPC, a shared memory-based RPC library that exposes the benefits of shared-memory communication while addressing the pitfalls described above. Using MemRPC, clients and servers can directly exchange pointer-rich data structures residing in coherent shared memory. MemRPC is the first RPC framework to provide fast, efficient, and scalable shared memory RPCs while addressing the security and scalability concerns of shared memory communication.
+To solve these issues, we propose RPCool, a shared memory-based RPC library that exposes the benefits of shared-memory communication while addressing the pitfalls described above. Using RPCool, clients and servers can directly exchange pointer-rich data structures residing in coherent shared memory. RPCool is the first RPC framework to provide fast, efficient, and scalable shared memory RPCs while addressing the security and scalability concerns of shared memory communication.
 
-MemRPC provides the following features:
+RPCool provides the following features:
 
-+ #emph[High-performance, low-latency RPCs.] MemRPC uses shared memory to provide faster RPCs than existing frameworks.
++ #emph[High-performance, low-latency RPCs.] RPCool uses shared memory to provide faster RPCs than existing frameworks.
 
-+ #emph[Preventing sender-receiver concurrent access.] MemRPC prevents the sender from modifying in-flight data by restricting the sender's access to RPC arguments while the receiver is processing them.
++ #emph[Preventing sender-receiver concurrent access.] RPCool prevents the sender from modifying in-flight data by restricting the sender's access to RPC arguments while the receiver is processing them.
 
-+ #emph[Lightweight checks for invalid and wild pointers.] MemRPC provides a lightweight sandbox to prevent dereferencing invalid or wild pointers while processing RPC arguments in shared memory.
++ #emph[Lightweight checks for invalid and wild pointers.] RPCool provides a lightweight sandbox to prevent dereferencing invalid or wild pointers while processing RPC arguments in shared memory.
 
-+ #emph[API compatibility.] MemRPC provides eRPC@erpc()-like API when sending RPCs with traditional serialized data.
++ #emph[API compatibility.] RPCool provides eRPC~@erpc#{}-like API when sending RPCs with traditional serialized data.
 
-Using MemRPC, applications can construct pointer-rich data structures with a `malloc``()`/`free``()`-like API and share them as RPC arguments. Clients can choose whether to share the RPC arguments with other clients or keep them private to the server and the client. Moreover, clients can access the data without deserializing it, traverse pointers within the argument if they are present, and only access the parts of the arguments they need.
+Using RPCool, applications can construct pointer-rich data structures with a `malloc``()`/`free``()`-like API and share them as RPC arguments. Clients can choose whether to share the RPC arguments with other clients or keep them private to the server and the client. Moreover, clients can access the data without deserializing it, traverse pointers within the argument if they are present, and only access the parts of the arguments they need.
 
-In existing systems, MemRPC can provide fast communication between co-located containerized services, but Compute Express Link 3.0 (CXL 3.0) will extend its reach across servers. CXL 3.0 will provide multi-host shared memory, offering an exciting alternative by providing hardware cache coherency among multiple compute nodes. However, CXL memory coherence will likely be limited to rack-scale systems@cxl-switch. MemRPC must provide a reasonable backup plan if CXL is not available. And, multi-node shared memory for communication results in challenges with availability and memory management, for example, memory leaks involving multiple hosts. To prevent data loss or memory leaks, MemRPC must notify applications of shared memory failures, and limit shared memory consumption.
+In existing systems, RPCool can provide fast communication between co-located containerized services, but Compute Express Link 3.0 (CXL 3.0) will extend its reach across servers. CXL 3.0 will provide multi-host shared memory, offering an exciting alternative by providing hardware cache coherency among multiple compute nodes. However, CXL memory coherence will likely be limited to rack-scale systems~@cxl-switch. RPCool must provide a reasonable backup plan if CXL is not available. And, multi-node shared memory for communication results in challenges with availability and memory management, for example, memory leaks involving multiple hosts. To prevent data loss or memory leaks, RPCool must notify applications of shared memory failures, and limit shared memory consumption.
 
-MemRPC addresses CXL's limited scalability by implementing a RDMA-based distributed shared memory (DSM) fallback. To coordinate memory management and decide between CXL and RDMA-based communication, MemRPC includes a global orchestrator.
+RPCool addresses CXL's limited scalability by implementing a RDMA-based distributed shared memory (DSM) fallback. To coordinate memory management and decide between CXL and RDMA-based communication, RPCool includes a global orchestrator.
 
-We compare MemRPC against several other RPC frameworks built for RDMA, TCP, and CXL-based shared memory. MemRPC achieves the lowest round-trip time and highest throughput across them for no-op RPCs. We showcase MemRPC's ability to share complex data structures using a JSON-like document store and compared against eRPC@erpc, gRPC@grpc, and ZhangRPC@zhang2023partial. Our results for MemRPC running over CXL 2.0 show a 8.3$times$ speedup for building the database and a 6.7$times$ speedup for search operations compared to the fastest RPC frameworks. In the DeathStarBench social network microservices benchmark, MemRPC improves Thrift RPC's maximum throughput by 10.0%. However we find that the benchmark's performance is primarily constrained by the need to update various databases on the critical path.
+We compare RPCool against several other RPC frameworks built for RDMA, TCP, and CXL-based shared memory. RPCool achieves the lowest round-trip time and highest throughput across them for no-op RPCs. We showcase RPCool's ability to share complex data structures using a JSON-like document store and compared against eRPC~@erpc, gRPC~@grpc, and ZhangRPC~@zhang2023partial. Our results for RPCool running over CXL 2.0 show a 8.3$times$ speedup for building the database #Green[in CXL memory using a container running on the same host] and a 6.7$times$ speedup for search operations compared to the fastest RPC frameworks. In the DeathStarBench social network microservices benchmark, RPCool improves Thrift RPC's maximum throughput by 10.0%. However we find that the benchmark's performance is primarily constrained by the need to update various databases on the critical path.
 
-The rest of the chapter is structured as follows: @sec:background presents the overview of RPCs and their limitations. @sec:overview-first describes and evaluates MemRPC in its most simple form, shared memory buffers across containers. @sec:overview-third introduces MemRPC's powerful pointer-rich RPC interface and @sec:overview-second extends MemRPC to use CXL-based multi-node shared memory. Finally, we discuss works related to MemRPC in @sec:rpcool-related and conclude in @sec:snapshot-conclude.
+The rest of the chapter is structured as follows: @sec:background presents the overview of RPCs and their limitations. @sec:overview-first describes and evaluates RPCool in its most simple form, shared memory buffers across containers. @sec:overview-third introduces RPCool's powerful pointer-rich RPC interface and @sec:overview-second extends RPCool to use CXL-based multi-node shared memory. Finally, we discuss works related to RPCool in @sec:rpcool-related and conclude in @sec:snapshot-conclude.
 
 
 == RPCs in Today's World
@@ -59,7 +63,7 @@ To send an RPC with RPCool, an application first requests a shared memory buffer
 
 While shared-memory RPCs enable low-overhead, efficient communication, a naive implementation would sacrifice the isolation that traditional TCP and RDMA based communication provides. For example, consider the eRPC model, after the sender sends an RPC, it can no longer modify the arguments of the RPC as the library creates a new, unshared copy of the buffer for the receiver. By contrast, with shared-memory RPCs, both the sender and the receiver have access to the same shared memory region.
 
-To address this, RPCool needs to prevent concurrent access to shared data. RPCool should let applications take exclusive access of shared memory data to prevent malicious (or buggy) applications from concurrently modifying it. Shared memory RPCs also face the challenge of communication between servers. Ideally, RPCool should not restrict applications to a single host. RPCool achieves this by providing eRPC-like API, enabling RPCool to use eRPC as its backend when shared memory is not available.
+To address this, RPCool needs to prevent concurrent access to shared data. RPCool should let applications take exclusive access of shared memory data to prevent malicious (or buggy) applications from concurrently modifying it. Shared memory RPCs also face the challenge of communication between servers. Ideally, RPCool should not restrict applications to a single host. RPCool achieves this by providing an eRPC-like API, enabling RPCool to use eRPC as its backend when shared memory is not available.
 
 In this section, we look at an overview of RPCool's design and how RPCool addresses these challenges.
 
@@ -71,14 +75,13 @@ In userspace, the RPCool library, `librpcool`, provides APIs for connecting to a
 
 RPCool's architecture includes channels and connections to provide TCP-like communication primitives, manage shared memory, and support for mutual exclusion using #emph[sealing];.
 
-#figure(image("../Figures/rpcool/sealing-summary.svg", width: 67%),
+#place(top, float: true, [#figure(image("../Figures/rpcool/sealing-summary.svg", width: 67%),
   caption: [
     Sealing overview.
   ]
 )
-<fig:sealing-summary>
+<fig:sealing-summary>~])
 
-\
 
 === Channels and Connections
 <channels-and-connections>
@@ -105,18 +108,19 @@ RPCool's safety mechanisms are designed to limit the effects of a compromised ap
 
 === Sealing RPC Data to Prevent Concurrent Accesses
 <subsec:seals>
-In scenarios where the receiver does not trust the sender, there are two attractive options to ensure that the senders cannot modify an RPC buffer while an RPC is in flight: First, the application can copy the RPC buffer, which works well for small objects, but for large and complex objects, it is expensive. For these cases, RPCool provides a faster alternative---sealing the RPC buffer. Seals in RPCool apply to the buffer of an in-flight RPC and prevent the sender from modifying them. The sender uses the new `seal()` system call to seal the RPC and relinquish write access to the buffer when required by the receiver. `librpcool` on the receiver can then verify that the region is sealed by communicating with the sender's kernel over shared memory. If not, `librpcool` would return the RPC with an error.
+In scenarios where the receiver does not trust the sender, there are two attractive options to ensure that the senders cannot modify an RPC buffer while an RPC is in flight: First, the application can copy the RPC buffer, which works well for small objects, but for large and complex objects, it is expensive. For these cases, RPCool provides a faster alternative---sealing the RPC buffer. Seals in RPCool apply to the buffer of an in-flight RPC and prevent the sender from modifying them. The sender uses the new `seal()` system call to seal the RPC and relinquish write access to the buffer when required by the receiver. `librpcool` on the receiver can then verify that the region is sealed by communicating with the sender's kernel over shared memory. If not, `librpcool` would return the RPC with an error. #Green[In RPCool, the kernel is part of the trusted domain, as noted in #ref(<shared-memory-safety-issues>)].
 
 When the receiver has processed the RPC, it marks the RPC as complete. The sender then calls the `release()` system call, and its kernel verifies that the RPC is complete before releasing the seal.
 
 === Example RPCool Program
 <example-memrpc-program>
-#figure(image("../Figures/rpcool/rpcool-api-example-shm.svg"),
+
+#place(top, float: true, [#figure(image("../Figures/rpcool/rpcool-api-example-shm.svg", width: 80%),
   caption: [
-    A simple ping-pong server using RPCool. The application requests a buffer and shares data using it. `sendbuf` and `recvbuf` point to the same address. Error handling omitted for brevity.
+    A simple ping-pong server using RPCool. The application requests a buffer and shares data using it. `sendbuf` and `recvbuf` point to the same address. Error handling omitted for brevity. #Green[The number `100` refers to a programmer-assigned function ID for the `process()` function.]
   ]
 )
-<fig:code-example-shm>~
+<fig:code-example-shm>~])
 
 @fig:code-example-shm shows the source code for an RPCool-based server and client that communicate over an RPCool channel, `mychannel`. RPCool's interface resembles that of eRPC's, but unlike eRPC, RPCool's RPC buffers are zero-copy. First, the server registers `process()` function (Line 8) that responds to the client's requests with a simple string. Once the function is registered, the server listens for any incoming connections (Line 10).
 
@@ -126,46 +130,44 @@ Similarly, once the client has connected to the server (Line 4), calls the serve
 <system-details>
 RPCool's implementation presents several challenges including how to implement sealing efficiently and how to ensure a sender cannot unseal an in-flight RPC. This section details RPCool's system daemon and how RPCool implements sealing.
 
-==== The Daemon and The Kernel
+#BoldParagraph[The Daemon and The Kernel]
 <the-daemon-and-the-kernel>
 In RPCool, each server runs a trusted daemon that is responsible for handling all connection and channel-related requests.
 
 The daemon is the only entity in RPCool that makes system calls to map or unmap a connection's heap into a process's address space. Consequently, all application must communicate with the daemon to open and close connections or channels. Although applications are permitted to make `seal()` and `release()` calls, they are not allowed to call `mprotect()` on the connection's heap pages. RPCool's kernel enforces this restriction by allowing only the `release()` system call for the address range corresponding to RPCool's heaps, while blocking all other system calls related to page permissions. This prevents applications from bypassing kernel checks for sealed pages.
 
-==== Sealing Heaps
-<sealing-heaps>
+#BoldParagraph[Sealing Heaps]
 RPCool's seal implementation prevents the sender from concurrently modifying an RPC buffer and enables the receiver to verify the seal before processing an RPC. This section describes how RPCool efficiently implements these features.
 
-#BoldParagraph[Seal implementation.]
-<seal-implementation.>
-RPCool lets the sender enable sealing on a per-call basis and specify the memory region associated with the request. When a sender requests to seal an RPC, `librpcool` calls a purpose-built `seal()` system call. In response, the kernel makes the corresponding pages read-only for the sender and writes a seal descriptor to a sender-read-only region in the shared memory. The receiver proceeds after it checks whether the region is sealed by reading the descriptor.
+_Seal implementation._
+RPCool lets the sender enable sealing on a per-call basis and specify the memory region associated with the request. When a sender requests to seal an RPC, `librpcool` calls a purpose-built `seal()` system call. In response, the kernel makes the corresponding pages read-only for the sender and writes a seal descriptor to a sender-read-only region in the shared memory. The receiver proceeds after it checks whether the region is sealed by reading the descriptor. #Green[While the sender's kernel could unmap the corresponding pages from the sender's memory, we make them read-only to ensure the least restrictive set of permissions required.]
 
 Once an RPC is processed, the sender calls the new `release()` system call and the kernel checks to ensure the RPC is complete and breaks the seal. The descriptors are implemented as a circular buffer, mapped as read-only for the sender but with read-write access for the receiver. These asymmetric permissions allow only the receiver to mark the descriptor as complete and the sender's kernel to verify that the RPC is completed before releasing the seal.
 
 Further, as an application can have several seal descriptors active at a given point in time, the sender also includes an index into the descriptor buffer along with RPC's arguments.
 
-#figure(image("../Figures/rpcool/sealing-mechanism-new.svg"),
+#place(top, float: true, [#figure(image("../Figures/rpcool/sealing-mechanism-new.svg"),
   caption: [
     #strong[Sealing mechanism overview];. The sender sends a sealed RPC, and the receiver process checks the seal and processes it. Once processed, the receiver marks the RPC as completed, and the sender releases the seal.
   ]
 )
-<fig:sealing-mechanism-overview>~
+<fig:sealing-mechanism-overview>~])
 
-#BoldParagraph[Example.]
+_Example._
 <example.>
-@fig:sealing-mechanism-overview illustrates the sealing mechanism. Before sending the RPC, the sender calls the `seal()` system call with the region of the memory to seal. Next, the sender's kernel writes the seal descriptor , followed by locking the corresponding range of pages by marking them as read-only in the sender's address space .
+@fig:sealing-mechanism-overview illustrates the sealing mechanism. Before sending the RPC, the sender calls the `seal()` system call #CircledNumber(1) 
+with the region of the memory to seal. Next, the sender's kernel writes the seal descriptor #CircledNumber(2), followed by locking the corresponding range of pages by marking them as read-only in the sender's address space #CircledNumber(3).
 
-Once sealed, the RPC is sent to the receiver. If the receiver is expecting a sealed RPC, it uses `rpc_call::isSealed()` to read and verify the seal descriptor , and processes the RPC if the seal is valid. After processing the request , the receiver marks the RPC as complete in the descriptor and returns the call. Next, when the sender receives the response, it asks its kernel to release the seal . The kernel verifies that the RPC is complete and releases the region by changing the permissions to read-write for the range of pages associated with the RPC .
+Once sealed, the RPC is sent to the receiver. If the receiver is expecting a sealed RPC, it uses `rpc_call::isSealed()` to read and verify the seal descriptor #CircledNumber(4), and processes the RPC if the seal is valid. After processing the request #CircledNumber(5), the receiver marks the RPC as complete in the descriptor #CircledNumber(6) and returns the call. Next, when the sender receives the response, it asks its kernel to release the seal #CircledNumber(7). The kernel verifies that the RPC is complete #CircledNumber(8) and releases the region by changing the permissions to read-write for the range of pages associated with the RPC #CircledNumber(9).
 
-#BoldParagraph[Optimizing sealing.]
-<optimizing-sealing.>
+_Optimizing sealing._
 Repeatedly invoking `seal()` and `release()` incurs significant performance overhead as they manipulate the page table permission bits and evict TLB entries~@amit2020don. To mitigate this, RPCool supports batching `release()` calls for multiple RPC buffers. Batching releases amortize the overhead across an entire batch, resulting in fewer TLB shootdowns. To use batched release, applications requests a buffer with batching enabled, copy in or construct the RPC payload in the buffer, and send a sealed RPC.
 
 Upon the RPC's returns, if the application does not immediately need to modify the RPC buffer, it can opt to release the seal in a batch. Batched releases work best when the application does not need to modify the sealed buffer until the batch is processed. However, if needed, the application can invoke `release()` and release the seal on the RPC buffer. In RPCool, each application independently configures the batch release threshold, with a threshold of 1024 achieving a good balance between performance and resource consumption.
 
-==== Adaptive Busy Waiting
+#BoldParagraph[Adaptive Busy Waiting]
 <subsec:busy-wait>
-RPCool uses busy waiting to monitor for new RPCs and their completion notifications. However, multiple threads busy waiting for RPCs can lead to excessive CPU utilization. To address this issue, RPCool introduces a brief sleep interval between busy-waiting iterations and can also offload the busy-waiting to a dedicated thread. Specifically, in RPCool, each thread skips sleeping between iterations if the CPU load is less than 20%, sleeps for 5~s when the load is between 20%--30%, and offloads busy-waiting to its dedicated thread if the CPU load exceeds 30%. We observe that this achieves a good balance between CPU usage and performance.
+RPCool uses busy waiting to monitor for new RPCs and their completion notifications. However, multiple threads busy waiting for RPCs can lead to excessive CPU utilization. To address this issue, RPCool introduces a brief sleep interval between busy-waiting iterations and can also offload the busy-waiting to a dedicated thread. Specifically, in RPCool, each thread skips sleeping between iterations if the CPU load is less than 20%, sleeps for 5~μs when the load is between 20%--30%, and offloads busy-waiting to its dedicated thread if the CPU load exceeds 30%. We observe that this achieves a good balance between CPU usage and performance.
 
 === Evaluation
 <sec:overview-first-eval>
@@ -173,13 +175,13 @@ Next, we will look at how RPCool's performance compares against other RPC framew
 
 #BoldParagraph[Evaluation configuration.]
 <evaluation-configuration.>
-All experiments in this work were performed on machines with Dual Intel Xeon Silver 4416+ and 256~GiB of memory. RDMA-based experiments use two servers with Mellanox CX-5 NICs. For the TCP experiments, we use the NIC in Ethernet mode, enabling TCP traffic over the RDMA NICs (IPoIB~@ipoib). Unless stated otherwise, all experiments are run on the v6.3.13 of the Linux kernel with adaptive sleep between busy-wait iterations (@subsec:busy-wait).
+All experiments in this work were performed on machines with Dual Intel Xeon Silver 4416+ and 256~GiB of memory. RDMA-based experiments use two servers with Mellanox CX-5 NICs. For the TCP experiments, we use the NIC in Ethernet mode, enabling TCP traffic over the RDMA NICs (IPoIB~@ipoib). Unless stated otherwise, all experiments are run on the v6.3.13 of the Linux kernel with adaptive sleep between busy-wait iterations (@system-details, "Adaptive Busy Waiting").
 
 All experiments are running on the local shared memory with sealing enabled. RPCool-relaxed refers to RPCool with sealing disabled.
 
-#figure(
-  caption: [No-op Latency and throughput of MemRPC (CXL, CXL-relaxed, and RDMA), RDMA-based eRPC, failure-resilient
-CXL-based ZhangRPC, and gRPC. MemRPC-relaxed is MemRPC with sealing and sandboxing (Section~@sec:overview-third) disabled.],
+~#figure(
+  caption: [No-op Latency and throughput of RPCool (CXL, CXL-relaxed, and RDMA), RDMA-based eRPC, failure-resilient
+CXL-based ZhangRPC, and gRPC. RPCool-relaxed is RPCool with sealing and sandboxing (@sec:overview-third) disabled.],
   table(
       columns: (auto, auto, auto, auto, auto, auto, auto),
       
@@ -215,8 +217,8 @@ CXL-based ZhangRPC, and gRPC. MemRPC-relaxed is MemRPC with sealing and sandboxi
 #show table.cell: it => text(weight: "bold")[#it]
 
 #figure(
-  caption: [Comparison of various MemRPC operations, repeated 2 million times. Data in column RDMA and about sandboxes will
-be discussed in Section~@sec:overview-third. Data in column CXL will be discussed in Section~@sec:overview-second. (1k = 1024)],
+  caption: [Comparison of various RPCool operations, repeated 2 million times. Data in column RDMA and about sandboxes will
+be discussed in @sec:overview-third. Data in column CXL will be discussed in  @sec:overview-second. (1k = 1024)],
   rotate(0deg, reflow: true, table(
   columns: 6,
   table.header(
@@ -230,25 +232,25 @@ be discussed in Section~@sec:overview-third. Data in column CXL will be discusse
   ),
   // 1
   SideHeader([RPCool\ Ops], 6),
-  "No-op MemRPC-relaxed RPC",
+  "No-op RPCool-relaxed RPC",
   "0.5 µs",
   "0.5 µs",
   "17.1 µs",
-  "RTT for MemRPC no-op RPC.",
+  "RTT for RPCool no-op RPC.",
 
   // 2
   "No-op Sealed RPC (1 page)",
   "1.3 µs",
   "1.4 µs",
   "—",
-  "RTT for MemRPC with seal and no sandbox.",
+  "RTT for RPCool with seal and no sandbox.",
 
   // 3
   "No-op Sealed+Sandboxed RPC (1 page)",
   "1.5 µs",
   "1.5 µs",
   "—",
-  "RTT for MemRPC with seal and a cached sandbox.",
+  "RTT for RPCool with seal and a cached sandbox.",
 
   // 4
   "Create Channel",
@@ -346,9 +348,9 @@ be discussed in Section~@sec:overview-third. Data in column CXL will be discusse
 
 #BoldParagraph[RPCool operation latencies.]
 <memrpc-operation-latencies.>
-Next, we look at the latency of RPCool's features in @tab:microbench. RPCool takes only 0.5~s in relaxed mode, and 1.3~s when using the seal operation.
+Next, we look at the latency of RPCool's features in @tab:microbench. RPCool takes only 0.5~μs in relaxed mode, and 1.3~μs when using the seal operation.
 
-Using @tab:microbench, we also look at the cost of the `seal()` and `release()` system calls. Overall, when using standard `seal()`+`release()`, RPCool takes 0.77~s, however, using batched `release()`, this drops to 0.47~s as the cost of changing the page table permission is amortized across multiple `seal()` calls.
+Using @tab:microbench, we also look at the cost of the `seal()` and `release()` system calls. Overall, when using standard `seal()`+`release()`, RPCool takes 0.77~ms, however, using batched `release()`, this drops to 0.47~ms as the cost of changing the page table permission is amortized across multiple `seal()` calls.
 
 #BoldParagraph[Memcached.]
 <memcached.>
@@ -385,26 +387,27 @@ To address this, RPCool supports allocating complex pointer-rich data structures
 
 // #heading(level: auto, depth: 3, [#align(left, "Hello")])
 
-RPCool provides a thread-safe memory allocator to allocate/free objects from the shared memory heaps and RPC buffers. Additionally, RPCool provides several STL-like containers such as `memrpc::vector`, `memrpc::string`, etc. These containers enable programmers to use a familiar STL-like interface for allocating objects but do not preclude custom pointer-rich data structures, e.g., trees or linked lists. The allocator and containers are based on Boost.Interprocess~@boost.interprocess. RPCool provides custom data structures since the C++ standard template library makes no guarantees about accessing data structures from multiple processes or from where the memory for internal need is allocated.
+RPCool provides a thread-safe memory allocator to allocate/free objects from the shared memory heaps and RPC buffers. Additionally, RPCool provides several STL-like containers such as `rpcool::vector`, `rpcool::string`, etc. These containers enable programmers to use a familiar STL-like interface for allocating objects but do not preclude custom pointer-rich data structures, e.g., trees or linked lists. The allocator and containers are based on Boost.Interprocess~@boost.interprocess. RPCool provides custom data structures since the C++ standard template library makes no guarantees about accessing data structures from multiple processes or from where the memory for internal need is allocated.
 
-#figure(image("../Figures/rpcool/private-public-channel-overview.svg", width: 70%),
+#place(top, float: true, [#figure(image("../Figures/rpcool/private-public-channel-overview.svg", width: 70%),
   caption: [
     Private and public connections in RPCool.
   ]
 )
-<fig:private-public-channel-overview>~
+<fig:private-public-channel-overview>~])
 
 #BoldParagraph[Shared memory heaps.]
-<shared-memory-heaps.> Each connection in RPCool is associated with a shared memory heap, enabling applications to allocate and share RPC data. RPC buffers for a connection are allocated from the connection's heap. @fig:private-public-channel-overview a--b shows how a single server can serve multiple clients by using independent heaps that are private to each connection (@fig:private-public-channel-overview a) or by using a single shared heap across multiple connections (@fig:private-public-channel-overview b). Connections start with a statically sized heap and can allocate additional heaps if they need more space.
+<shared-memory-heaps.> Each connection in RPCool is associated with a shared memory heap, enabling applications to allocate and share RPC data. RPC buffers for a connection are allocated from the connection's heap. @fig:private-public-channel-overview#{}a--b shows how a single server can serve multiple clients by using independent heaps that are private to each connection (@fig:private-public-channel-overview#{}a) or by using a single shared heap across multiple connections (@fig:private-public-channel-overview#{}b). Connections start with a statically sized heap and can allocate additional heaps if they need more space.
 
 === Preventing Unsafe Pointer Accesses using Sandboxes
 <subsec:sandboxes>
-#figure(image("../Figures/rpcool/sandboxing-summary.svg", width: 60%),
+
+#place(top, float: true, [#figure(image("../Figures/rpcool/sandboxing-summary.svg", width: 60%),
   caption: [
     Sandboxing overview.
   ]
 )
-<fig:sandboxing-summary>~
+<fig:sandboxing-summary>~])
 
 Sharing complex data structures brings the potential for wild or invalid pointers. To ensure safety, RPCool protects applications from these dangers.
 
@@ -430,13 +433,14 @@ Whenever a node writes to a page, it gets exclusive access to the page by unmapp
 
 === Example RPCool Program
 <example-memrpc-program-1>
-#figure(image("../Figures/rpcool/rpcool-api-example.svg", width: 80%),
+
+#place(top, float: true, [#figure(image("../Figures/rpcool/rpcool-api-example.svg", width: 80%),
   caption: [
     A simple ping-pong server using RPCool. The application requests a buffer and shares pointer-rich data using it. Error checking omitted for brevity.
   ]
 )
-<fig:code-example-app-integrated>
-\
+<fig:code-example-app-integrated>~])
+
 
 @fig:code-example-app-integrated extends the RPCool's previous example (@fig:code-example-shm) to return a pointer to a string instead of copying it into the RPC buffer. Similar to the previous example, once the client has connected to the server (Line 4), it calls the server's function (Line 6). Once the server responds to the request with a pointer to the result, the client prints the result and the pointer of the object received (Line 8--9). As RPCool maps objects at the same address across servers, both the server (line 6) and the client (line 8) will print the same address.
 
@@ -457,12 +461,13 @@ An application can destroy RPC buffers to free the associated memory or reset it
 
 ==== Sandboxes
 <subsec:sandboxes-impl>
-#figure(image("../Figures/rpcool/sandboxing-working.svg", width: 70%),
+
+#place(top, float: true, [#figure(image("../Figures/rpcool/sandboxing-working.svg", width: 70%),
   caption: [
     Preallocated sandboxes, their key assignment, and key permissions in RPCool.
   ]
 )
-<fig:sandbox-working>~
+<fig:sandbox-working>~])
 
 RPCool enables applications to sandbox an RPC by restricting the processing thread's access to any memory outside of an RPC's arguments. This prevents the applications from accidentally dereferencing pointers to private memory. To be useful, RPCool's sandboxes must have low performance overhead, should allow dynamic memory allocations despite restricting access to the process's private memory, and permit selective access to private variables.
 
@@ -518,9 +523,9 @@ To understand the advantages of integrating RPC with the application, we will lo
 
 #BoldParagraph[RPCool operation latencies.]
 <memrpc-operation-latencies.-1>
-To understand sandbox latency and its impact on RPCool's performance, we measured the latency of a no-op RPC with sealing and sandboxing at 1.5~s compared to 0.5~s with no sealing or sandboxing. When cached, sandboxes (i.e., sandboxes with pre-assigned protection key) have very low enter+exit latency at 78.0~ns. This latency increases to 0.6~s when the sandbox is not cached and RPCool needs to reassign protection keys and set up the sandbox's heap.
+To understand sandbox latency and its impact on RPCool's performance, we measured the latency of a no-op RPC with sealing and sandboxing at 1.5~μs compared to 0.5~μs with no sealing or sandboxing. When cached, sandboxes (i.e., sandboxes with pre-assigned protection key) have very low enter+exit latency at 78.0~ns. This latency increases to 0.6~μs when the sandbox is not cached and RPCool needs to reassign protection keys and set up the sandbox's heap.
 
-Finally, using @tab:microbench, we look at the latency of `memcpy``()` to compare it against the cost of sealing+sandboxing, which includes sealing a page, starting a sandbox over it, and finally releasing it. This is because applications can copy RPC arguments to prevent concurrent accesses from the sender without using sealing+sandboxing. We observe that on local DRAM, for more than a page, sealing+sandboxing is faster than `memcpy``()` (0.77~s vs 0.98~s). This suggests that for data smaller a page, applications should use `memcpy``()`, while for data larger than a page, applications should use sealing+sandboxing.
+Finally, using @tab:microbench, we look at the latency of `memcpy``()` to compare it against the cost of sealing+sandboxing, which includes sealing a page, starting a sandbox over it, and finally releasing it. This is because applications can copy RPC arguments to prevent concurrent accesses from the sender without using sealing+sandboxing. We observe that on local DRAM, for more than a page, sealing+sandboxing is faster than `memcpy``()` (0.77~μs vs 0.98~μs). This suggests that for data smaller a page, applications should use `memcpy``()`, while for data larger than a page, applications should use sealing+sandboxing.
 
 #BoldParagraph[Memcached and MongoDB.]
 <par:memcached-mongodb-dsm>
@@ -528,12 +533,12 @@ To understand how RPCool's DSM performs, we evaluated Memcached (@fig:first-memc
 
 For Memcached and MongoDB, RPCool's DSM implementation outperforms TCP over Infiniband by at least 1.93$times$ and 1.34$times$, respectively.
 
-#figure(image("../Figures/rpcool/cooldb.svg", width: 90%),
+#place(top, float: true, [#figure(image("../Figures/rpcool/cooldb.svg", width: 90%),
   caption: [
     RPCool's performance running CoolDB over CXL to showcase worst case performance.
   ]
 )
-<fig:cooldb-perf>~
+<fig:cooldb-perf>~])
 
 
 #BoldParagraph[CoolDB.]
@@ -546,12 +551,12 @@ To evaluate CoolDB, we first populate it with 100k JSON documents using the NoBe
 
 While accessing objects stored in CXL memory has additional latency, CoolDB is a replacement for the use case where applications or microservices use dedicated machines as database, e.g., a dedicated server running MongoDB or Memcached. In such cases, the network access latency would eclipse the additional access latency of CXL shared memory.
 
-#figure(image("../Figures/rpcool/tput-vs-lat.svg"),
+#place(top, float: true, [#figure(image("../Figures/rpcool/tput-vs-lat.svg"),
   caption: [
     DeathStarBench SocialNetwork Benchmark P50 and P90 latencies using ThriftRPC and RPCool (on CXL).
   ]
 )
-<fig:deathstarbench-tput-vs-lat>~
+<fig:deathstarbench-tput-vs-lat>~])
 
 
 #BoldParagraph[DeathStarBench's Social Network.]
@@ -585,15 +590,16 @@ To address the challenges associated with multi-host shared memory, RPCool's orc
 
 === Handling Failures in RPCool
 <handling-failures-in-memrpc>
-#figure(image("../Figures/rpcool/rpcool-failures.svg", width: 80%),
+
+#place(top, float: true, [#figure(image("../Figures/rpcool/rpcool-failures.svg", width: 80%),
   caption: [
     #strong[Two possible failure scenarios in RPCool.] (a) Server crash results in an orphaned heap. (b) Client left with heaps after multiple servers crash.
   ]
 )
-<fig:rpcool-failures>\
+<fig:rpcool-failures>~])
 
 
-RPCool must be able to deal with the two major shared-memory failure scenarios: (a) if a server process that is not talking to any client dies, the heaps associated with it are leaked, as no process manages them anymore (@fig:rpcool-failures a) and (b) when a client application that connects to multiple servers; if one of these servers fails, the client might not free the associated heaps and retain a significant amount of shared memory (@fig:rpcool-failures b), consuming shared resources.
+RPCool must be able to deal with the two major shared-memory failure scenarios: (a) if a server process that is not talking to any client dies, the heaps associated with it are leaked, as no process manages them anymore (@fig:rpcool-failures#{}a) and (b) when a client application that connects to multiple servers; if one of these servers fails, the client might not free the associated heaps and retain a significant amount of shared memory (@fig:rpcool-failures#{}b), consuming shared resources.
 
 To address these challenges, RPCool uses leases and quotas. Every time a process maps a heap as part of a connection, it receives a lease from the orchestrator. Applications using shared memory heaps periodically renew their leases. When a process fails, the lease expires, and the orchestrator can notify other participants and clean up any orphaned heaps. Upon a failure notification, an application can either continue using the heap to access previously allocated objects or release it if it is no longer needed, freeing up resources.
 
@@ -626,7 +632,7 @@ However, workloads that store their entire working set on CXL observe higher slo
 
 Some prior works have proposed using RPCs over distributed shared memory. Similar to RPCool, Wang et al.~@wang2021in describe RPCs with references to objects over distributed shared memory. However, since they focus on data-intensive applications, they propose immutable RPC arguments and return values and require trust among the applications. Some works also optimize which application unit uses RPCs; Nu~@ruan2023nu breaks down web applications into proclets that share the same address space among multiple hosts and uses optimized RPCs for communication among them. When proclets are placed on the same machine, they make local function calls, and traditional RPCs otherwise. However, in both cases, proclets need to copy the arguments to the receiver and require mutual trust. Lu et al.~@lu2024serialization improve the performance of serverless functions by implementing `rmap()`, allowing serverless functions to map remote memory, thus avoiding serialization. However, `rmap()` requires mutual trust between the sender and the receiver.
 
-Several other works have looked into using shared memory container communication. Shimmy~@khasgiwale2023shimmy implement message passing among containers with support for fallback to RDMA. Hobson et al.~@hobson2021shared offer an interface similar to RPCool which support for passing complex pointer rich data structures over shared memory, however, they do not address the security concerns of shared memory communication. PipeDevice~@su2022pipedevice offloads inter-container communication to the custom hardware, significantly accelerating it.
+Several other works have looked into using shared memory container communication. Shimmy~@khasgiwale2023shimmy implement message passing among containers with support for fallback to RDMA. Hobson et al.~@hobson2021shared offer an interface similar to RPCool which support for passing complex pointer rich data structures over shared memory, however, they do not address the security concerns of shared memory communication. PipeDevice~@su2022pipedevice offloads inter-container communication to the custom hardware, significantly accelerating it. #Green[Naos~@naos implements support for sending Java data structures over RDMA without explicit serialization. Unlike RPCool, which provides shared, concurrent access to pointer-rich data, Naos enables applications to send Java-based data structures over RDMA without explicit serialization. Moreover, unlike RPCool which has safety checks for invalid or malformed pointers, Naos offers no such guarantees.]
 
 Numerous prior studies have explored optimizing the performance of RPC frameworks using RDMA, but they all require serialization and compression, adding performance overheads. HatRPC~@hatrpc uses code hints to optimize Thrift RPC and enables RDMA verbs-based communication, while DaRPC~@darpc implements an optimized RDMA-based custom RPC framework. Kalia et al.~@erpc propose a highly efficient RDMA-based RPC framework called eRPC that outperforms traditional TCP-based RPCs in latency and throughput. Chen et al.~@chen2023remote avoid the overhead of sidecars used in RPC deployment by implementing serialization and sidecar policies as a system service. Sidecars are proxy processes that run alongside the main application for policy enforcement, logging, etc., without modifying the application.
 
@@ -646,4 +652,4 @@ RPCool addresses these challenges by preventing the sender from modifying in-fli
 
 == Acknowledgement
 
-This chapter contains material from "MemRPC: Fast Shared Memory RPC For Containers and CXL," by Suyash Mahar, Ehsan Hajyjasini, Seungjin Lee, Zifeng Zhang, Mingyao Shen, and Steven Swanson, which is under review. The dissertation author is the primary investigator and the first author of this paper.
+This chapter contains material from "MemRPC: Fast Shared Memory RPC For Containers and CXL," by Suyash Mahar, Ehsan Hajyjasini, Seungjin Lee, Zifeng Zhang, Mingyao Shen, and Steven Swanson, which is under review. The dissertation author is the primary investigator and the co-first author of this paper.

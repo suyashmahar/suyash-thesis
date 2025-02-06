@@ -5,12 +5,11 @@
 // However, 
 Existing PM programming systems are built on a patchwork of modifications to the memory-mapped file interface and thus make several compromises in how persistent data is accessed. These systems use custom pointer formats, handle logging through ad-hoc mechanisms, and implement recovery using diverse but incompatible logging and transactional semantics.
 
-In this paper, we show that the design of existing PM libraries results in PM programming models that severely limit programming flexibility and introduce additional unnatural constraints and performance problems.
+For example, opening multiple copies of a pool that resides at a fixed address would result in address conflicts. For another, using non-native (#emph[i.e.];, "smart" or "fat" ) pointers avoids the need for fixed addresses but adds performance overhead to common-case accesses, makes persistent data unreadable by non--PM-aware code, leaves software tools (#emph[e.g.];, debuggers) unable to interpret that data, and locks-in the PM data to a particular PM library. Further, current implementations of fat-pointers do not allow multiple copies of PM data to be mapped simultaneously unless the PM library first translates all pointers in one of the copies. Finally, enforcing crash consistency in the application requires that after a crash, 1) the application is still available, 2) the application still has write permissions for the data (even if the application only wants to read it) #Green[to ensure that it can recover from any incomplete transactions], and 3) the system knows which application was running at the time of the crash #Green[(to ensure that the recovery application can parse the recovery logs)]---none of which are true in general.
 
-For example, opening multiple copies of a pool that resides at a fixed address would result in address conflicts. For another, using non-native (#emph[i.e.];, "smart" or "fat" ) pointers avoids the need for fixed addresses but adds performance overhead to common-case accesses, makes persistent data unreadable by non--PM-aware code, leaves software tools (#emph[e.g.];, debuggers) unable to interpret that data, and locks-in the PM data to a particular PM library. Further, current implementations of fat-pointers do not allow multiple copies of PM data to be mapped simultaneously unless the PM library first translates all pointers in one of the copies. Finally, enforcing crash consistency in the application requires that after a crash, 1) the application is still available, 2) the application still has write permissions for the data (even if the application only wants to read it), and 3) the system knows which application was running at the time of the crash--none of which are true in general.
+Today's PM programming libraries thus leave the critical issue of data integrity in the hands of the programmer and system administrators rather than robustly ensuring those properties at the system level. Further, existing PM programming libraries restrict basic operations like opening cloned copies of PM data simultaneously, reading PM data without write access, or using legacy pointer-based tools to access PM data. A storage system with these characteristics represents a step back in safety and data integrity compared to the state-of-the-art persistent storage systems---namely filesystems.
 
-Today's PM programming libraries thus leave the critical issue of data integrity in the hands of the programmer and system administrators rather than robustly ensuring those properties at the system level. Further, existing PM programming libraries restrict basic operations like opening cloned copies of PM data simultaneously, reading PM data without write access, or using legacy pointer-based tools to access PM data. A storage system with these characteristics represents a step back in safety and data integrity compared to the state-of-the-art persistent storage systems -- namely filesystems.
-
+In this chapter, we show that the design of existing PM libraries results in PM programming models that severely limit programming flexibility and introduce additional unnatural constraints and performance problems. 
 To solve these problems, we propose a new persistent memory programming library, #emph[Puddles];. Puddles solve these problems while preserving the speed and flexibility that the existing PM programming interface provides. Puddles provide the following properties:
 
 1. #emph[Application-independent crash-recovery];: PM recovery after a crash in Puddles completes before #emph[any] application accesses the data. // Recovery succeeds even if the application writing data at the time of the crash is absent after restart, no longer has the write permissions, or was just one of the multiple applications updating the data at the time of the crash.
@@ -19,6 +18,7 @@ To solve these problems, we propose a new persistent memory programming library,
 2. #emph[Native pointers for PM data];: Puddles use native pointers and, thus, allow code written with other PM libraries or non-PM-aware code (#emph[e.g.], compilers and debuggers) to read and reason about it. Pointers are a fundamental and universal tool for in-memory data structure construction. // Changing their implementation for PM adds runtime overhead of translation, requires specialized code to read PM data, and stymies software engineering tools (#emph[e.g.];, compilers and debuggers do not understand custom pointer formats used by PM libraries).
 
 3. #emph[Relocatability];: Puddles can transparently relocate data to avoid any address conflicts and thereby enable sharing and relocation of PM data between machines.
+~
 
 Puddles is the first PM programming system that provides application-independent recovery on a crash and supports both native pointers and relocatability while providing a traditional transactional interface. Designing Puddles, however, is challenging as native pointers, relocatability, and mappable PM data are properties that are at odds with each other. For example, native-pointers have traditionally prevented relocatable PM data, and non-mappable data like JSON does not support pointers.
 
@@ -43,7 +43,7 @@ We compare Puddles against PMDK and other PM programming libraries using several
   ]
 )
 
-#[
+#place(top, float: true, [
   // #show table.cell.where(y: 0): set text(size: 0.8em, weight: "bold")
   #show table.cell.where(y: 0): strong
   #figure(
@@ -70,9 +70,9 @@ We compare Puddles against PMDK and other PM programming libraries using several
         [Clobber-NVM~@clobbernvm], yes, yes, no, no, yes, no,
         [Puddles], yes_heavy, yes_heavy, yes_heavy, yes_heavy, yes_heavy, yes_heavy
     )
-  )<tab:related-pm-libraries>
+  )<tab:related-pm-libraries>~
   
-]~
+])
 
 Current persistent memory programs suffer from a host of problems that limit their usability, reliability, and flexibility in ways that would be unthinkable for more mature data storage systems (e.g., file systems, object stores, or databases). In particular, they rely on the program running at the time of the crash for recovery, use proprietary pointers that lock data into a single application or library, and place limits on the combination of pools (i.e., files) an application can have open at one time.
 
@@ -101,13 +101,13 @@ PMDK, the most widely used PM library, illustrates how a lack of permissions can
 === PM Pointers are Restrictive and Inflexible
 <pm-pointers-are-restrictive-and-inflexible>
 
-#figure([#block[
+#place(top, float: true, [#figure([#block[
   #box(image("../Figures/Puddles/ptr-chasing-benchmarks.svg"))
   ]],
   caption: [
     Linkedlist and binary tree creation and traversal microbenchmarks, showing overhead of fat pointers vs.~native pointers. Single-threaded workload. Linked list's length: $2^16$, and tree height: $16$
   ]
-)<fig:fat-ptr-overhead>~
+)<fig:fat-ptr-overhead>~])
 
 Persistent memory enables pointer-rich persistent data, but existing PM systems offer programmers two non-optimal choices: (a) use fat-pointers (base+offset) or self-relative pointers and add overhead to pointer dereference, or (b) use native pointers and abandon relocatability.
 
@@ -144,14 +144,14 @@ Pools are made of puddles that are mappable units of persistent memory in the Pu
 
 The Puddle system consists of three major system components (@fig:puddles-arch) that work together to provide application support for mapping and managing puddles.
 
-#figure([#block[
+#place(top, float: true, [#figure([#block[
   #box(image("../Figures/Puddles/architecture.svg"))
   ]],
   caption: [
     The Puddles system includes `Puddled` for system-supported persistence, `Libpuddles`, and `Libtx` for a simple programming interface on top of `Puddled`'s primitives.
   ]
 )
-<fig:puddles-arch>
+<fig:puddles-arch>~])
 
 + #emph[`Puddled`] is the privileged daemon process that manages access to all the puddles in a machine. `Puddled` implements access control and provides APIs for system-supported recovery and relocating persistent memory data.
 
@@ -161,14 +161,14 @@ The Puddle system consists of three major system components (@fig:puddles-arch) 
 
 Together, `Libpuddles` and `Libtx` provide a PMDK-like interface allowing the application to open pools, allocate objects, and execute transactions without managing or caring about individual puddles.
 
-#figure([#block[
+#place(top, float: true, [#figure([#block[
   #box(image("../Figures/Puddles/puddles_arch_overview.svg", width: 70%))
   ]],
   caption: [
     Puddles system overview. Each application talks to the Puddles daemon (`Puddled`) to access the puddles in the system. Applications might map the same puddle with different permission.
   ]
 )
-<fig:puddles-arch-overview>~
+<fig:puddles-arch-overview>~])
 
 @fig:puddles-arch-overview shows an example database application that demonstrates the benefits of Puddles' approach where the database and logs are partitioned into pools. The application manages a PM database and writes event logs using the #emph[Database app];. A separate #emph[Log reader] process has read-only access to the event logs. Since both the database and the event logs are part of the same global persistent space of a machine, the application can write to both the database and the event log in the same transaction. The application can also have pointers between the event log and the database, and the Puddles system would make sure that they work in any application with permission to access the data.
 
@@ -233,14 +233,14 @@ To support this, `Libpuddles` communicates the location and format of its logs t
 
 To solve these challenges, Puddles implement a flexible, system-wide, and low-overhead logging format.
 
-#figure([#block[
+#place(top, float: true, [#figure([#block[
   #box(image("../Figures/Puddles/logspace_and_logs.svg", width: 60%))
   ]],
   caption: [
     Application registers a logspace with the system. A logspace space lists all puddles that the application uses to log data for crash consistency.
   ]
 )
-<fig:logspace-and-logs>~
+<fig:logspace-and-logs>~])
 
 #BoldParagraph("Managing logs using log puddles and log spaces")
 Puddles organize logs using a directory, called a #emph[log space];, that tracks all the active crash-consistency logs. To simplify the implementation, `Libpuddles` stores both the log space and the logs in designated global puddles not assiciated with any pools. As shown in @fig:logspace-and-logs, the #emph[log space puddle] is a list of #emph[log space entries];, each identifying a #emph[log puddle] that the application is using to store a log. For instance, an application might have one log puddle per thread to support concurrent transactions. Each of these log puddles would have its own entry in the log space. Once registered, the application can update its log space or modify the logs without notifying the daemon.
@@ -257,14 +257,14 @@ To implement a variety of logging techniques, Puddles' logging interface allows 
 
 @fig:log-entry-format illustrates Puddles' log and log-entry layout. The "`Sequence Range`" in the log and the "`Seq`" field in log-entry control recovery behavior by specifying which entries will be used during recovery. The "`order`" field specifies the order in which log entries will be applied (forward for redo logging, backward for undo logging). "`Next log Ptr`" and "`Last Log Entry Ptr`" track log entry allocation. And, the checksum, like in PMDK, allows the recovery code to identify and skip any entry that only partially persisted because of a crash. The log's metadata includes a pointer to find the next free log entry, a pointer to the current tail entry, and the maximum size of the log.
 
-#figure([#block[
+#place(top, float: true, [#figure([#block[
   #box(image("../Figures/Puddles/log-entry-format.svg", width: 70%))
   ]],
   caption: [
     Puddles' log-entry and log format.
   ]
 )
-<fig:log-entry-format>
+<fig:log-entry-format>~])
 
 Finally, to keep transaction costs low, every thread caches a reference to the log puddle used on the first transaction of that thread and reuses it for future transactions. This prevents `Libpuddles` from allocating a new puddle and adding it to the log space on every transaction. Once the transaction commits, the log is dropped and is ignored by the `Puddled`.
 
@@ -273,16 +273,16 @@ Finally, to keep transaction costs low, every thread caches a reference to the l
 #BoldParagraph("Example hybrid logging implementation.")
 To illustrate the flexibility of Puddle's log format, we will demonstrate how it can implement a hybrid (undo+ redo) logging scheme. Hybrid logging enables low programming complexity for application programmers that use undo logging while allowing libraries to implement their internals using faster but more complex redo logging. For example, PMDK uses hybrid logging to improve performance of allocation/free requests in transactions@pmdk-hybrid-logging. While we implement hybrid logging, the programmer can enable support for undo- or redo-only logging by creating only those entries in the log.
 
-#figure(image("../Figures/Puddles/hybrid-log-new.svg", width: 100%)) <fig:hybrid-log-desc>~
+#place(top, float: true, [#figure(image("../Figures/Puddles/hybrid-log-new.svg", width: 100%), caption: "Three stages of hybrid logging TX commit and recovery. Operations are instructions executed during commit stages.") <fig:hybrid-log-desc>~])
 
 #BoldParagraph("Transaction commit.")
 The application (perhaps via a library like `Libtx`) commits a transaction in three stages and without communicating with puddled. Some logging schemes may not need all three stages. For instance, a purely redo-based logging scheme could skip the undo stage. This is shown in @fig:hybrid-log-desc with the `sfence` and `clwb` ordering and the sequence numbers used for delineating the stages (elaborated on later in this section). The first two stages work on the undo and redo logs, respectively, and the final stage marks the log as invalid. These three stages are:
 
-+ #emph[Stage 1, Flush undo logged locations] (@fig:hybrid-log-desc a). `Libpuddles` goes through the undo log entries and makes the corresponding locations durable on the PM.
++ #emph[Stage 1, Flush undo logged locations] (@fig:hybrid-log-desc#{}a). `Libpuddles` goes through the undo log entries and makes the corresponding locations durable on the PM.
 
-+ #emph[Stage 2, Apply the redo log] (@fig:hybrid-log-desc b). Once all the undo-logged locations are flushed to PM, `Libpuddles` starts copying new data from the redo logs. Redo logged locations were unchanged before the commit, so, `Libpuddles` copies the new data from the log entry to the corresponding memory location.
++ #emph[Stage 2, Apply the redo log] (@fig:hybrid-log-desc#{}b). Once all the undo-logged locations are flushed to PM, `Libpuddles` starts copying new data from the redo logs. Redo logged locations were unchanged before the commit, so, `Libpuddles` copies the new data from the log entry to the corresponding memory location.
 
-+ #emph[Stage 3, TX complete] (@fig:hybrid-log-desc c). The transaction is complete, and all changes are durable. The log is marked as invalid.
++ #emph[Stage 3, TX complete] (@fig:hybrid-log-desc#{}c). The transaction is complete, and all changes are durable. The log is marked as invalid.
 
 ~
 
@@ -312,7 +312,7 @@ Although the application can directly write to the logs most programmers will us
     Linked List using Puddles' programming interface along with the log's state after various operations.
   ]
 )
-<fig:consistency-api>
+<fig:consistency-api>~
 
 @fig:consistency-api shows an example of a simple linked list implementation to understand the programmer's view of the puddle logging interface. The linked list implementation uses the puddle allocator to allocate a new node (line 4). This new node is automatically undo-logged by the allocator. Next, when the execution of line 8 completes, the log now contains a new undo log entry for the next field of the current tail (). Next, the application redo logs the update to the list's tail pointer (line 12). Being redo logged by the application, this update is performed only on the log; the actual write location will be updated on the transaction commit. Since the application uses hybrid logging, after line 12, the log now contains both undo and redo log entries ().
 
@@ -323,7 +323,7 @@ An alternative (and superficially attractive) option to keeping a single log for
 
 Per-puddle logs, however, would have several problems. First, concurrent transactions on a puddle would require multiple logs per puddle, taking up additional space and adding significant complexity in managing and coordinating these logs. Second, transactions that span puddles (the common case in large data structures) would require a more expensive multi-phase commit protocol.
 
-For logging, Puddles' interface is limited to conventional per-location recovery and does not support implementations that re-execute or resume execution@clobbernvm@izraelevitz2016failure@liu2018ido, semantic log operations@pronto, or shadow logging in DRAM and flushing it to PM@liu2017dudetm@castro2018hardware@pangolin. These systems use custom logging techniques that require complex recovery conditions that make it difficult to provide a unified interface.
+For logging, Puddles' interface is limited to conventional per-location recovery and does not support implementations that re-execute or resume execution~@clobbernvm@izraelevitz2016failure@liu2018ido, semantic log operations@pronto, or shadow logging in DRAM and flushing it to PM~@liu2017dudetm@castro2018hardware@pangolin. These systems use custom logging techniques that require complex recovery conditions that make it difficult to provide a unified interface.
 
 In addition to persistent memory locations, Puddles logs can contain log entries for volatile memory locations that the applications apply on abort to keep volatile and persistent memories consistent with each other. During recovery after a crash, `Puddled` ignores these logs as the destination address does not belong to the global puddles space and the volatile state is lost.
 
@@ -405,7 +405,7 @@ Let us explore a scenario where a potentially malicious application logs data an
 == Results
 <sec:results>
 
-#figure(
+#place(top, float: true, [#figure(
   caption: [System Configuration],
   table(
       columns: (auto, auto, auto, auto),
@@ -418,7 +418,7 @@ Let us explore a scenario where a potentially malicious application logs data an
       [CPU & HW Thr.], [Intel Xeon 6230 & 20], [Linux Kernel], [v5.4.0-89],
       [DRAM / PM], [93~GiB / 6×128~GiB], [Build system], [gcc 10.3.0]
   )
-)<tab:sysconfig>
+)<tab:sysconfig>~])
 
 
 Puddles perform as fast or faster than PMDK and are competitive with state-of-the-art PM libraries across all workloads while providing system-supported recovery, simplified global PM space, and relocatability. We evaluate Puddles using a BTree, a KV Store using the YCSB benchmark suite, a Linked List, and several microbenchmarks.
@@ -430,7 +430,7 @@ Puddles perform as fast or faster than PMDK and are competitive with state-of-th
 
 This section presents three different measurements to provide insights into how Puddles perform: (a) performance of Puddles' API primitives to compare and contrast them with PMDK, (b) average latency and frequency of `Puddled` operations, and (c), the time taken by different parts of Puddles' relocatability interface.
 
-#block[
+#place(top, float: true, [
 #figure(
   align(center)[#table(
     columns: 3,
@@ -438,26 +438,25 @@ This section presents three different measurements to provide insights into how 
     table.header(table.cell(align: center)[#strong[Operation];], [#strong[Puddles];], [#strong[PMDK];],),
     table.hline(),
     [`TX NOP`], [11.0~ns], [142~ns],
-    [`TX_ADD` (`8B/4kB`)], [0.04/1.1~s], [0.3/2.2~s],
-    [`malloc` (`8B/4kB`)], [0.1/6.8~s], [0.4/0.4~s],
-    [`malloc`+`free` (`8B/4kB`)], [5.6/6.0~s], [2.0/3.0~s],
+    [`TX_ADD` (`8B/4kB`)], [0.04/1.1~μs], [0.3/2.2~μs],
+    [`malloc` (`8B/4kB`)], [0.1/6.8~μs], [0.4/0.4~μs],
+    [`malloc`+`free` (`8B/4kB`)], [5.6/6.0~μs], [2.0/3.0~μs],
   )]
   , caption: [Mean latency of Puddles and PMDK primitives.]
   , kind: table
-  )<tab:avg-lat>
-] 
+  )<tab:avg-lat>~
+])
 
-\
 
-#BoldParagraph[API primitives.];<par:api-primitives> Measurements in @tab:avg-lat show that across most API operations, Puddles outperform PMDK. To measure the overhead of starting and committing a transaction, we measure the latency of executing an empty transaction -- `TX NOP`. Since Puddles' transactions are thread-local and do not allocate a log at the beginning of a transaction, they are extremely lightweight. For an empty transaction, Puddles' overhead only includes a single function call to execute an empty function.
+#BoldParagraph[API primitives.];<par:api-primitives> Measurements in @tab:avg-lat show that across most API operations, Puddles outperform PMDK. To measure the overhead of starting and committing a transaction, we measure the latency of executing an empty transaction--`TX NOP`. Since Puddles' transactions are thread-local and do not allocate a log at the beginning of a transaction, they are extremely lightweight. For an empty transaction, Puddles' overhead only includes a single function call to execute an empty function.
 
 For undo-logging operations (`TX_ADD`), Puddles have latencies similar to PMDK. However, we observe slower allocations (`malloc``()`) and de-allocations (`free``()`) for Puddles. The performance difference is an artifact of the implementation. For example, Puddles uses undo logging while PMDK uses redo logging for the allocator.
 
-#BoldParagraph[Daemon primitives.] Since the Puddles system offers application-independent recovery, it needs to talk to `Puddled` to allocate puddles and perform other housekeeping operations. The daemon communicates with the application using a UNIX domain socket. On average, a round-trip message (no-op) between the daemon and the application takes 46.9~s. Most daemon operations take in the order of a few hundred microseconds to complete.
+#BoldParagraph[Daemon primitives.] Since the Puddles system offers application-independent recovery, it needs to talk to `Puddled` to allocate puddles and perform other housekeeping operations. The daemon communicates with the application using a UNIX domain socket. On average, a round-trip message (no-op) between the daemon and the application takes 46.9~μs. Most daemon operations take in the order of a few hundred microseconds to complete.
 
-During execution, the function `RegLogSpace` is called once to register a puddle as the log space and takes on average 134.0~s. `GetNewPuddle` and `GetExistPuddle` are called every time the application needs a puddle. Internally, `Puddled` manages each puddle as a file and returns a file descriptor for puddle requests. Allocating a new file slows down `GetNewPuddle`, and it takes considerably longer (1705.0~s) than calls to `GetExistPuddle` (125.3~s). Even though the call to `GetNewPuddle` is relatively expensive, `Libpuddles` mitigates their overhead by caching a few puddles when the application starts. Caching puddles in the application avoids calls to the daemon when the application runs out of space in a puddle. As we will see with the workload performance, even with relatively expensive daemon calls, Puddles outperform PMDK.
+During execution, the function `RegLogSpace` is called once to register a puddle as the log space and takes on average 134.0~μs. `GetNewPuddle` and `GetExistPuddle` are called every time the application needs a puddle. Internally, `Puddled` manages each puddle as a file and returns a file descriptor for puddle requests. Allocating a new file slows down `GetNewPuddle`, and it takes considerably longer (1705.0~μs) than calls to `GetExistPuddle` (125.3~μs). Even though the call to `GetNewPuddle` is relatively expensive, `Libpuddles` mitigates their overhead by caching a few puddles when the application starts. Caching puddles in the application avoids calls to the daemon when the application runs out of space in a puddle. As we will see with the workload performance, even with relatively expensive daemon calls, Puddles outperform PMDK.
 
-Finally, in addition to the runtime overheads, recovery from a crashed transaction takes 110.1~s in Puddles.
+Finally, in addition to the runtime overheads, recovery from a crashed transaction takes 110.1~μs in Puddles.
 
 #BoldParagraph[Relocatability primitives.] On a request to export a pool, `Puddled` creates copies of the puddles and the associated metadata (e.g., pointer maps). Data export cost, therefore, scales linearly with the size of the PM data and includes a constant overhead per puddle. Exporting a pool takes 0.3~s for 16~B and 0.5~s for 16~MiB of PM data in our implementation. Importing data, on the other hand, is nearly free, as it only includes registering the imported puddles with the daemon (1.5~ms for both 16~B and 16~MiB). After import, if the imported data conflicts with an existing range, the puddle system automatically rewrites all the pointers in the mapped puddle. During pointer rewrite, every pointer in the pool must be visited, so runtime scales linearly with the number of pointers in the pool. Rewriting pointers takes 0.2~ms for 20 pointers, 1.6~ms for 2000 pointers, and 0.5s for 2~million pointers.
 
@@ -466,25 +465,23 @@ Finally, in addition to the runtime overheads, recovery from a crashed transacti
 === Workload evaluation
 <subsec:workload-evaluation>
 
-#figure(image("../Figures/Puddles/linkedlist.svg"),
+#place(top, float: true, [#figure(image("../Figures/Puddles/linkedlist.svg"),
   caption: [
     Puddles' performance against PMDK and Romulus for singly linked list (lower is better). Native pointers offer a significant performance advantage for Puddles.
   ]
-)<fig:linkedlist-perf> 
+)<fig:linkedlist-perf>~])
 
-\
 
 To evaluate Puddles' performance, this section includes results for several workloads implemented with Puddles, PMDK, Romulus, go-pmem, and Atlas. Further, to understand the overhead of fat-pointers in PMDK, we used stack samples from PMDK workloads and find that the overhead of fat-pointers ranges from 8.5% for btree, which has multiple pointer dependencies, to 0.76% for the KV-store benchmark that uses fewer pointers per request by making extensive use of hash map and vectors. Finally, across workloads, the daemon primitives result in an additional overhead of about 0.2~ms. This overhead is primarily from registering the first log puddle during the transaction of the benchmark.
 
 #BoldParagraph[Linked List] We compare Puddles' implementation of a singly linked list against PMDK and Romulus. @fig:linkedlist-perf compares the performance of three different operations (each performed 10 million times): (a) Insert a new tail node, (b) delete the tail node, and (c) sum up the value of each node. For the insert, PMDK and Puddles perform similarly and Romulus performs slightly worse, but delete and sum in Puddles outperform PMDK by a significant margin. This performance gap is from the native pointers' lower performance overhead and better cache locality in Puddles. In addition to Puddles' undo logging implementation presented here, we evaluated a hybrid log implementation using undo logging for the allocator and redo logging for the application data and found the performance to be similar to the undo-logging only version, that is, within 5%.
 
-#figure(image("../Figures/Puddles/btree.svg"),
+#place(top, float: true, [#figure(image("../Figures/Puddles/btree.svg"),
   caption: [
     Performance of Puddles, PMDK, and Romulus's implementation of an order 8 Btree (lower is better).
   ]
-)<fig:btree-perf>
+)<fig:btree-perf>~])
 
-\
 
 #BoldParagraph[B-Tree.] @fig:btree-perf shows the performance of an identical order 8 B-Tree implementation in PMDK, Puddles, and Romulus. Both the keys and the values are 8 bytes. Similar to the Linked List benchmark, Puddles perform as fast as or better than PMDK across the three operations while being competitive with Romulus. In summary, Puddles' native-pointer results in a much faster (3.1$times$) performance over PMDK for search operations.
 
@@ -502,19 +499,19 @@ To evaluate Puddles' performance, this section includes results for several work
     Multithreaded workload that processes 1/n$""^(upright("th"))$ of the array per thread.
   ]
 )
-<fig:euler-throughput>
+<fig:euler-throughput>~
 
 #BoldParagraph[Multithreaded scaling.];<par:multithreading> To study the multithreaded scalability of Puddles, we used an embarrassingly parallel workload that computes Euler's identity for a floating-point array with a million elements. @fig:euler-throughput shows the normalized time taken by the workload with the increasing thread count scales linearly and is not limited by Puddles' implementation. In the benchmark, each worker thread works on a small part of the array at a time using a transaction. The workload's throughput scales linearly with the number of threads until it uses all the physical CPUs (20); increasing the number of threads further still results in performance gains, albeit smaller. Puddles' asynchronous logging interface, along with thread-local transactions, allows it to have fast and scalable transactions.
 
 === Relocation: Sensor Network Data Aggregation
 <subsec:relocation-exp>
 
-#figure(
+#place(bottom, float: true, [#figure(
   image("../Figures/Puddles/data-agg.svg"),
   caption: [
     #strong[Data Aggregation Workload.] Independent sensor nodes modify copies of pointer-rich data-structures and a home node aggregates the copies into a single copy.
   ]
-)<fig:data-agg>~
+)<fig:data-agg>~])
 
 Puddles' ability to relocate data allows it to merge copies of PM data without performing expensive reallocations or serialization/de-serializations. In contrast, applications using traditional PM libraries cannot clone and open multiple copies of PM data because they contain embedded UUIDs or virtual memory pointers.
 

@@ -1,4 +1,6 @@
+#let final = true
 #let prof_indent = 1cm
+
 
 #let CommitteeProf(name, title: "") = {
   h(prof_indent) + [Professor ] + name
@@ -13,7 +15,13 @@
 }
 
 #let CircledNumber(num) = {
-  box(align(horizon, circle(radius: 0.5em, fill: black, inset: (x: 0pt, y: 0pt))[#text(fill: white)[#num]]))
+  // box(align(horizon, circle(radius: 0.5em, fill: black, inset: (x: 0pt, y: 0pt))[#text(fill: white)[#num]]))
+
+  let nums = ("⓿",
+    "❶", "❷", "❸", "❹", "❺", "❻", "❼", "❽", "❾", "❿",
+    "⓫", "⓬", "⓭", "⓮", "⓯", "⓰", "⓱", "⓲", "⓳", "⓴")
+
+    h(0.25em) + box[#scale(200%, move(dy: -0em, dx: 0.1em, nums.at(num)))] + h(0.6em)
 }
 
 #let BoldParagraph(title) = {
@@ -46,3 +54,18 @@
 #let UpdateLater(txt) = text(fill: blue)[#txt]
 
 #let ln = linebreak;
+
+#let Green(txt) = {
+  if not final {
+    text(fill: green.darken(20%), strong(txt))
+  } else {
+    text(txt)
+  }
+}
+
+#let Red(txt) = {
+  if final {
+  } else {
+    text(fill: red.darken(20%), strong(txt))
+  }
+}
