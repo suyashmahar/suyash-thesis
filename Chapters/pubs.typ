@@ -1,9 +1,10 @@
-#let pubs = par(
+#let pubs = [
+  #set par(
     leading: 0.5em,
     spacing: 1.5em,
     first-line-indent: 0em,
-  )[
-  Suyash Mahar, B. Ray, S. Khan, _PMFuzz: Test Case Generation for Persistent Memory Programs_ (Proceedings of the 26th ACM International Conference on Architectural Support for Programming Languages and Operating Systems).
+  )
+  Suyash Mahar, B. Ray, S. Khan, _PMFuzz: Test Case Generation for Persistent Memory Programs_ (Proceedings of the 26th ACM International Conference on Architectural Support for Programming Languages and Operating Systems). \
   
   L. Yavits, L. Orosa, Suyash Mahar, J. D. Ferreira, M. Erez, R. Ginosar, O. Mutlu, WoLFRaM: _Enhancing Wear-Leveling and Fault Tolerance in Resistive Memories Using Programmable Address Decoders_ (2020 IEEE 38th International Conference on Computer Design (ICCD), 187-196).
   

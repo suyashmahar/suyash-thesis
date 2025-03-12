@@ -1,8 +1,5 @@
 #import "../macros.typ": *
 
-#import "@preview/wordometer:0.1.3": word-count-of
-
-
 #let abstract = [
   Several new memory technologies like Persistent Memory (PM) and Compute Express Link (CXL)-based memories have emerged in the recent past to address the growing need for memory capacity and bandwidth.  
   However, these memory technologies require new programming methodologies and are often supported using legacy memory or storage interfaces.  
@@ -16,10 +13,3 @@
   Lastly, using RPCool, we show how CXL-based shared memory provides new use cases like high-performance RPCs. RPCs today require slow and inefficient serialization and compression to communication over networks like TCP. To address these limitations, we propose RPCool, an RPC framework that uses shared memory to pass pointers to data and avoid serialization. Additionally, RPCool provides isolation similar to traditional networking by preventing invalid pointers and preventing the sender from manipulating shared data for inflight RPCs. // Further, to overcome limited range of CXL 3.0, RPCool can automatically fallback to RDMA-based distributed shared memory. // Overall, RPCool reduces round-trip latency by 2.2$times$ compared to the state-of-the-art RDMA framework, and 6.3$times$ compared to CXL-based RPC framework. 
 ]
 
-// #if int(word-count(total=> abstract)) > 350 {
-//   fatal("laksdf")
-// }
-
-#let wc = word-count-of(abstract)
-#let err_msg = "Abstract exceeds 350 words. Current length :" + str(wc.words)
-#assert(wc.words < 350, message: err_msg)

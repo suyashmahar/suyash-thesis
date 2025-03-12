@@ -13,7 +13,7 @@
   A special thanks to Professor Samira Khan for providing me opportunities during my undergraduate years, enabling me to make significant contributions to research projects, helping with my PhD applications, and providing support and guidance over the years. My thanks also goes to everyone at SHIFTLAB who helped me when I was getting started with research, especially Sihang Liu, Korakit Seemakhupt and Yasas Seneviratne.
   
   
-  I am grateful to all the fun times I had at UCSD. Ziheng, thank you for being a great friend and roommate. Mingyao, I will always appreciate all your restaurant recommendations! Nara, your support means a lot. Zixuan, you were always helpful in figuring out how to navigate various stuff, both in life and at UCSD. Yanbo, thank you for being the perfect travel companion! Seungjin, Ehsan, Zifeng, YJ, Juno, and Theo---thank you for all the fun and unforgettable memories.
+  I am grateful to all the fun times I had at UCSD. Ziheng, thank you for being a great friend and roommate. Mingyao, I will always appreciate all your restaurant recommendations! Nara, your support means a lot. Zixuan, you were always helpful in figuring out how to navigate various stuff, both in life and at UCSD. Yanbo, thank you for being the perfect travel companion! Yi, Seungjin, Ehsan, Zifeng, YJ, Juno, Theo, and Morteza---thank you for all the fun and unforgettable memories.
   
   
   Finally, I would like to thank my parents, who provided me with support and encouragement during my PhD. My girlfriend, Caleigh, who has always been supportive and encouraging.

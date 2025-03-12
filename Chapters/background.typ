@@ -8,7 +8,7 @@ To understand the different memory technologies available today to overcome the 
 
 Recent advances in memory technology and device architecture have enabled a variety of storage devices that support byte-addressable persistence. These devices communicate with the host using interfaces like CXL.mem~@cxl2, DDR-T~@aepperf, or DDR-4~@nv-dimm and rely on flash, 3D-XPoint, or DRAM as their backing media, as shown in @fig:persistent-mem-devices.
 
-#figure(
+#place(bottom, float: true, [#figure(
   caption: [Byte-addressable devices.],
   placement: bottom,
   table(
@@ -25,7 +25,7 @@ Recent advances in memory technology and device architecture have enabled a vari
     [NV-DIMMs~@nv-dimm], [Mem. Bus], [DRAM],
     [Embedded NVM~@reram-soc], [Internal Bus], [ReRAM]
   )
-)<fig:persistent-mem-devices>
+)<fig:persistent-mem-devices>])
 
 These devices share a few common characteristics: (1) they offer byte-level access to data, (2) they improve on existing DDR-based memory either in storage capacity, bandwidth, or are non-volatile, and (3) they are generally slower than DRAM. // Later, in @snapshot-overview, we will explain how Snapshot takes advantage of these properties of emerging memories to implement a fast, userspace-based `msync()`.
 
@@ -34,7 +34,7 @@ These devices share a few common characteristics: (1) they offer byte-level acce
 Non-volatile memory, like a disk, does not lose data on a
 power failure. However, unlike disks, non-volatile memories are byte-addressable which allows the applications to access them using the processor's load-store interface just like how they would access traditional DDR-based memory.
 
-Examples of non-volatile memories include Intel's DC Persistent Memory Modules~@optane and embedded NVMs~@reram-soc
+Examples of non-volatile memories include Intel's DC Persistent Memory Modules~@optane and embedded NVMs~@reram-soc.
 
 
 === Non-Volatile Memory Programming 

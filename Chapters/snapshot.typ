@@ -161,7 +161,7 @@ To see how snapshot works in practice, consider an array `append()` function tha
 
 When the program starts executing #CircledNumber(1), the instrumentation calls the logging function with the address of updated locations (`&arr[arr->sz]` and `&arr->sz`), and update sizes. The function logs the address by creating a new entry in the thread-local undo log.
 
-Next,	#CircledNumber(2) the program continues and updates memory locations. Since the program directly interacts only with the DRAM, the value in the DRAM is updated, but the value in the backing memory (e.g., PM) is unchanged. Finally, the application calls `msync()` to update the backing memory. On this call, Snapshot iterates over the log to find all locations that have been updated and uses them to copy updates from DRAM to PM. After updating PM with the values from DRAM, Snapshot drops the log by marking it as invalid. Once `msync()` returns, any failure would reflect the persistent state of the most recent `msync()`.
+Next,	#CircledNumber(2) the program continues and updates memory locations. Since the program directly interacts only with the DRAM, the value in the DRAM is updated, but the value in the backing memory (e.g., PM) is unchanged. Finally, #CircledNumber(3) the application calls `msync()` to update the backing memory. On this call, Snapshot iterates over the log to find all locations that have been updated and uses them to copy updates from DRAM to PM. After updating PM with the values from DRAM, Snapshot drops the log by marking it as invalid. Once `msync()` returns, any failure would reflect the persistent state of the most recent `msync()`.
 
 === Correctness Check
 

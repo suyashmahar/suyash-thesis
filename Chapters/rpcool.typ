@@ -75,12 +75,7 @@ In userspace, the RPCool library, `librpcool`, provides APIs for connecting to a
 
 RPCool's architecture includes channels and connections to provide TCP-like communication primitives, manage shared memory, and support for mutual exclusion using #emph[sealing];.
 
-#place(top, float: true, [#figure(image("../Figures/rpcool/sealing-summary.svg", width: 67%),
-  caption: [
-    Sealing overview.
-  ]
-)
-<fig:sealing-summary>~])
+#place(bottom, float: true, [#figure(image("../Figures/rpcool/sealing-summary.svg", width: 67%), caption: "Sealing overview.", placement: top)<fig:sealing-summary>~])
 
 
 === Channels and Connections

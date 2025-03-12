@@ -26,22 +26,21 @@
   
   abstract: abstract,
   
-  dedication: align(center, [To anyone reading this.]),
+  // dedication: align(center, [To anyone reading this.]),
   
-  epigraph: epigraph,
+  // epigraph: epigraph,
 
   abbrv: abbrv,
 
   acknowledgement: acknowledgement,
 
-  vita: par(spacing: 0em, leading: 0.5em)[
-    #table(
+  vita:
+    table(
       stroke: none,
       columns: (0.25fr, 1fr),
-      [2020],[Bachelor of Technology, Electronics and Communication Engineering, Indian Institute of Technology Roorkee],
-      [2025],[Doctor of Philosophy, Computer Science, University of California San Diego],
-    )
-  ],
+      [2020],[Bachelor of Technology, Electronics and Communication Engineering, \ Indian Institute of Technology Roorkee],
+      [2025],[Doctor of Philosophy, Computer Science, \ University of California San Diego],
+    ),
 
   publications: pubs,
 
@@ -49,15 +48,18 @@
 
   enable_field_of_study: true,
 
-  research_topic: "Computer Science and Engineering (Computer Systems)"
+  research_topic: "Computer Science and Engineering (Computer Systems)",
+
+  enable_book_formatting: false
 )
 
+// #show figure: set block(breakable: false)
 
 = Emerging Memory Technologies <background>
 
 #include "Chapters/background.typ"
 
-= Snapshot: High-performance `msync()`-based crash consistency. <chapter:snapshot>
+= Snapshot: High-performance `msync()`-based crash consistency <chapter:snapshot>
 
 #include "Chapters/snapshot.typ"
 

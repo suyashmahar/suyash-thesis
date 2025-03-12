@@ -33,14 +33,14 @@ We compare Puddles against PMDK and other PM programming libraries using several
 == Limitations of Current PM Systems
 <sec:pm-programming-challenges>
 
-#let box90(content) = table.cell(
-  par(leading: 0.5em)[
-    #rotate(-90deg, reflow: true)[
+#let box90(content) = table.cell({
+    set par(leading: 0.5em)
+    rotate(-90deg, reflow: true)[
       
       #content
       
     ]
-  ]
+  }
 )
 
 #place(top, float: true, [
